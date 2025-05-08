@@ -133,6 +133,17 @@
             <artifactId>spring-ai-alibaba-starter-memory-redis</artifactId>
         </dependency>
 
+        <!-- Resilience4j 熔断器 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- Spring AI JDBC ChatMemory Repository（冷存储，MySQL 持久化） -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
@@ -146,6 +157,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Micrometer Tracing Bridge（OpenTelemetry） -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+
         <!-- spring-file-storage（阿里云 OSS） -->
         <dependency>
             <groupId>cn.xuyanwu</groupId>
@@ -157,6 +174,12 @@
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
             <version>3.17.4</version>
+        </dependency>
+
+        <!-- RabbitMQ 消息队列（请求与业务解耦，应对高并发） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
         <!-- 测试 -->
