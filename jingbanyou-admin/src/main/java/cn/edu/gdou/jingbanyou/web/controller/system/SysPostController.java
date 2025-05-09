@@ -19,6 +19,7 @@ import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.system.domain.SysPost;
 import cn.edu.gdou.jingbanyou.system.service.ISysPostService;
 
@@ -43,7 +44,7 @@ public class SysPostController extends BaseController
     {
         startPage();
         List<SysPost> list = postService.selectPostList(post);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
     
     @Log(title = "岗位管理", businessType = BusinessType.EXPORT)

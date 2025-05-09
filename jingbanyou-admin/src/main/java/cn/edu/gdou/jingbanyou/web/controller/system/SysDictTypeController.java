@@ -20,6 +20,7 @@ import cn.edu.gdou.jingbanyou.common.core.domain.entity.SysDictType;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.system.service.ISysDictTypeService;
 
 /**
@@ -40,7 +41,7 @@ public class SysDictTypeController extends BaseController
     {
         startPage();
         List<SysDictType> list = dictTypeService.selectDictTypeList(dictType);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     @Log(title = "字典类型", businessType = BusinessType.EXPORT)

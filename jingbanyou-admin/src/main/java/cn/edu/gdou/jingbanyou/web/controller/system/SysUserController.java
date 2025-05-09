@@ -26,6 +26,7 @@ import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.SecurityUtils;
 import cn.edu.gdou.jingbanyou.common.utils.StringUtils;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
 import cn.edu.gdou.jingbanyou.system.service.ISysDeptService;
 import cn.edu.gdou.jingbanyou.system.service.ISysPostService;
@@ -62,7 +63,7 @@ public class SysUserController extends BaseController
     {
         startPage();
         List<SysUser> list = userService.selectUserList(user);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     @Log(title = "用户管理", businessType = BusinessType.EXPORT)

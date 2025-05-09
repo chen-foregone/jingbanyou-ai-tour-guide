@@ -8,7 +8,7 @@ spring:
             master:
                 url: ${DB_URL:jdbc:mysql://localhost:3306/jingbanyou?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8}
                 username: ${DB_USERNAME:root}
-                password: ${DB_PASSWORD:}
+                password: ${DB_PASSWORD:czh123457}
             # 从库数据源
             slave:
                 # 从数据源开关/默认关闭
@@ -47,8 +47,9 @@ spring:
                 allow:
                 url-pattern: /druid/*
                 # 控制台管理用户名和密码
+                # 生产环境必须设置 DRUID_PASSWORD 环境变量，否则 Druid 监控面板将无密码保护
                 login-username: ${DRUID_USERNAME:ruoyi}
-                login-password: ${DRUID_PASSWORD:}
+                login-password: ${DRUID_PASSWORD}
             filter:
                 stat:
                     enabled: true

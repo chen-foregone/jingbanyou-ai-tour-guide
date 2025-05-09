@@ -23,6 +23,7 @@ import cn.edu.gdou.jingbanyou.common.core.domain.model.LoginUser;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.StringUtils;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
 import cn.edu.gdou.jingbanyou.framework.web.service.SysPermissionService;
 import cn.edu.gdou.jingbanyou.framework.web.service.TokenService;
@@ -61,7 +62,7 @@ public class SysRoleController extends BaseController
     {
         startPage();
         List<SysRole> list = roleService.selectRoleList(role);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     @Log(title = "角色管理", businessType = BusinessType.EXPORT)
@@ -198,7 +199,7 @@ public class SysRoleController extends BaseController
     {
         startPage();
         List<SysUser> list = userService.selectAllocatedList(user);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /**
@@ -210,7 +211,7 @@ public class SysRoleController extends BaseController
     {
         startPage();
         List<SysUser> list = userService.selectUnallocatedList(user);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /**

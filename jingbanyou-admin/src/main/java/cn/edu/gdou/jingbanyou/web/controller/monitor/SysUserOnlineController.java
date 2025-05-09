@@ -66,7 +66,7 @@ public class SysUserOnlineController extends BaseController
         }
         Collections.reverse(userOnlineList);
         userOnlineList.removeAll(Collections.singleton(null));
-        return getDataTable(userOnlineList);
+        return getDataTable(userOnlineList, userOnlineList.size());
     }
 
     /**

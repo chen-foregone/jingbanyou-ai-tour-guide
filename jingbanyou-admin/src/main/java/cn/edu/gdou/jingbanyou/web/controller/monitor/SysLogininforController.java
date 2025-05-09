@@ -16,6 +16,7 @@ import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.framework.web.service.SysPasswordService;
 import cn.edu.gdou.jingbanyou.system.domain.SysLogininfor;
 import cn.edu.gdou.jingbanyou.system.service.ISysLogininforService;
@@ -41,7 +42,7 @@ public class SysLogininforController extends BaseController
     {
         startPage();
         List<SysLogininfor> list = logininforService.selectLogininforList(logininfor);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     @Log(title = "登录日志", businessType = BusinessType.EXPORT)

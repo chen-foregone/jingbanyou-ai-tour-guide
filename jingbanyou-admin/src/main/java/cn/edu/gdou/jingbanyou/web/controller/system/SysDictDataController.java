@@ -22,6 +22,7 @@ import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.StringUtils;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.system.service.ISysDictDataService;
 import cn.edu.gdou.jingbanyou.system.service.ISysDictTypeService;
 
@@ -46,7 +47,7 @@ public class SysDictDataController extends BaseController
     {
         startPage();
         List<SysDictData> list = dictDataService.selectDictDataList(dictData);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     @Log(title = "字典数据", businessType = BusinessType.EXPORT)

@@ -16,6 +16,7 @@ import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.system.domain.SysOperLog;
 import cn.edu.gdou.jingbanyou.system.service.ISysOperLogService;
 
@@ -37,7 +38,7 @@ public class SysOperlogController extends BaseController
     {
         startPage();
         List<SysOperLog> list = operLogService.selectOperLogList(operLog);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     @Log(title = "操作日志", businessType = BusinessType.EXPORT)

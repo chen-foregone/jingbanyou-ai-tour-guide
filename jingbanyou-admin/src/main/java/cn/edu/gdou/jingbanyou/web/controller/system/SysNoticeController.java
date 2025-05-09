@@ -19,6 +19,7 @@ import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.core.text.Convert;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.system.domain.SysNotice;
 import cn.edu.gdou.jingbanyou.system.service.ISysNoticeReadService;
 import cn.edu.gdou.jingbanyou.system.service.ISysNoticeService;
@@ -47,7 +48,7 @@ public class SysNoticeController extends BaseController
     {
         startPage();
         List<SysNotice> list = noticeService.selectNoticeList(notice);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /**

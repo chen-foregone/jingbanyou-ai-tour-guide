@@ -29,6 +29,9 @@ jingbanyou:
         "到明清街" → route_plan
         "你好" → complex_other
         "今天天气怎么样" → complex_other
+        "帮我设计一个网站" → complex_other
+        "帮我写一段文案" → complex_other
+        "教我写代码" → complex_other
 
         请只输出以下JSON格式（不要输出任何解释）：
         { "intent": "意图标签", "question": "从问题中提取的核心内容" }
@@ -48,7 +51,7 @@ jingbanyou:
         { "intent": "意图标签", "question": "从音频中提取的问题文本" }
 
       model:
-        name: qwen-plus
+        name: qwen-turbo
         temperature: 0.1
         topP: 0.8
         maxTokens: 128

@@ -57,6 +57,8 @@ spring:
     basename: i18n/messages
   profiles:
     active: druid
+  codec:
+    max-in-memory-size: 10MB
   # 文件上传
   servlet:
     multipart:
@@ -65,7 +67,20 @@ spring:
       # 设置总上传的文件大小
       max-request-size: 20MB
   config:
-    import: classpath:chatclient/hybrid-retrieval.yml,classpath:chatclient/route-polish.yml,classpath:chatclient/profile-update.yml,classpath:chatclient/map-route-invoker.yml,classpath:chatclient/general-chat.yml,classpath:chatclient/distinguish.yml
+    import: optional:classpath:chatclient/hybrid-retrieval.yml,optional:classpath:chatclient/route-polish.yml,optional:classpath:chatclient/profile-update.yml,optional:classpath:chatclient/map-route-invoker.yml,optional:classpath:chatclient/general-chat.yml,optional:classpath:chatclient/distinguish.yml
+  # RabbitMQ 消息队列
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD:admin}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    listener:
+      simple:
+        concurrency: 5
+        max-concurrency: 20
+        prefetch: 1
+        default-requeue-rejected: false
   ai:
     mcp:
       client:
@@ -126,13 +141,13 @@ spring:
       lettuce:
         pool:
           # 连接池中的最小空闲连接
-          min-idle: 0
+          min-idle: 8
           # 连接池中的最大空闲连接
-          max-idle: 8
+          max-idle: 32
           # 连接池的最大数据库连接数
-          max-active: 8
-          # #连接池最大阻塞等待时间（使用负值表示没有限制）
-          max-wait: -1ms
+          max-active: 64
+          # 连接池最大阻塞等待时间
+          max-wait: 500ms
 
 # spring-file-storage（阿里云 OSS）
   file-storage:
@@ -141,8 +156,8 @@ spring:
     aliyun-oss:
       - platform: aliyun-oss-1
         endpoint: oss-cn-beijing.aliyuncs.com
-        access-key: LTAI5t5nJGzDbFXWaqVktKAK
-        secret-key: jM0BTeIOXmHMJd6n2v7WGATfnTC63C
+        access-key: ${OSS_ACCESS_KEY:}
+        secret-key: ${OSS_SECRET_KEY:}
         bucket-name: java-ai-c-z-h
         domain: https://java-ai-c-z-h.oss-cn-beijing.aliyuncs.com
         base-path: dkd-images/
@@ -158,7 +173,7 @@ token:
   # 令牌自定义标识
   header: Authorization
   # 令牌密钥
-  secret: ${JWT_SECRET:jingbanyou2026secretkeyforjwttokenverification}
+  secret: jwt-secret-key-for-local-dev-only-12345678901234567890
   # 令牌有效期（默认30分钟）
   expireTime: 30
 
@@ -190,8 +205,7 @@ springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
+    enabled: false  # 默认禁用，dev profile 需设置为 true 以启用 Swagger UI
     tags-sorter: alpha
   group-configs:
     - group: 'default'
@@ -213,13 +227,28 @@ jingbanyou:
     # text-embedding-v2 中文场景建议 0.55-0.65
     rag-precheck:
       threshold: 0.55
+  faq:
+    # FAQ 相似度阈值（0.0-1.0），低于此分数不命中 FAQ
+    similarity-threshold: 0.75
+  tourist:
+    # ChatMemory TTL（分钟）
+    chat-memory:
+      ttl-minutes: 30
+    # 熔断器配置
+    circuit-breaker:
+      # 失败率阈值（%）
+      failure-rate-threshold: 50
+      # 熔断打开后等待恢复时间（秒）
+      wait-duration-in-open-state: 30
+      # 慢调用阈值（秒）
+      slow-call-duration-threshold: 10
 
 # 防止XSS攻击
 xss:
   # 过滤开关
   enabled: true
   # 排除链接（多个用逗号分隔）
-  excludes: /system/notice
+  excludes: ""
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
 

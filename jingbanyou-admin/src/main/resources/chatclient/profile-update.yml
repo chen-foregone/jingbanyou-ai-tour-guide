@@ -2,11 +2,22 @@ jingbanyou:
   ai:
     profile-update:
       prompt: |
-        从游客的一轮对话中提取兴趣标签，输出纯JSON数组，最多3个标签，无其他文字。
-        例如：["历史","宗教文化"]
+        你是一个游客画像提取助手。从以下对话中提取游客偏好，输出一个JSON对象，包含4个字段，全部用中文：
+        {
+          "interestTags": ["标签1", "标签2", ...],  // 最多3个兴趣标签，如"历史"、"亲子"、"美食"
+          "groupType": "出行类型",  // solo(独自一人)/couple(情侣)/family(家庭带娃)/group(结伴出行)，如果对话中没有明显线索则填null
+          "visitedSpots": ["景点名1", ...],  // 对话中提到的景点名，最多3个，如果对话中没有提到具体景点则填[]
+          "preferRouteType": "偏好路线类型"  // history(历史人文)/nature(自然风光)/food(美食小吃)/barrierFree(无障碍)，如果对话中没有线索则填null
+        }
+        注意：
+        - 只从对话内容中提取，不要推测
+        - 如果某个字段无法确定，填null（字符串）或[]（数组）
+        - interestTags最多3个，去重
+        - visitedSpots最多3个，填景点名称
+        - 只输出JSON，不要任何解释文字
       model:
-        name: qwen-plus
+        name: qwen-turbo
         temperature: 0.0
         topP: 1.0
-        maxTokens: 50
+        maxTokens: 200
         responseFormat: JSON_OBJECT

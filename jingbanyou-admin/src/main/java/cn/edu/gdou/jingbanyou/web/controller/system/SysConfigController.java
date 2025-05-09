@@ -19,6 +19,7 @@ import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
+import com.github.pagehelper.PageInfo;
 import cn.edu.gdou.jingbanyou.system.domain.SysConfig;
 import cn.edu.gdou.jingbanyou.system.service.ISysConfigService;
 
@@ -43,7 +44,7 @@ public class SysConfigController extends BaseController
     {
         startPage();
         List<SysConfig> list = configService.selectConfigList(config);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     @Log(title = "参数管理", businessType = BusinessType.EXPORT)
