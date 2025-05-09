@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.quartz.controller;
 
 import java.util.List;
+import com.github.pagehelper.PageInfo;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,7 +41,7 @@ public class SysJobLogController extends BaseController
     {
         startPage();
         List<SysJobLog> list = jobLogService.selectJobLogList(sysJobLog);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /**

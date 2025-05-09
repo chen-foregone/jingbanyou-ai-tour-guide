@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.quartz.controller;
 
 import java.util.List;
+import com.github.pagehelper.PageInfo;
 import jakarta.servlet.http.HttpServletResponse;
 import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,7 @@ public class SysJobController extends BaseController
     {
         startPage();
         List<SysJob> list = jobService.selectJobList(sysJob);
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /**
