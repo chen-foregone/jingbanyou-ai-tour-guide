@@ -41,4 +41,14 @@ public class CacheConstants
      * 登录账户密码错误次数 redis key
      */
     public static final String PWD_ERR_CNT_KEY = "pwd_err_cnt:";
+
+    /**
+     * 游客会话 redis key
+     */
+    public static final String VISITOR_SESSION_KEY = "visitor:session:";
+
+    /**
+     * 游客在线心跳 redis key（按景区维度）
+     */
+    public static final String VISITOR_ONLINE_KEY = "visitor:online:";
 }

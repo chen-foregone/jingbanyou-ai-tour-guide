@@ -2,6 +2,7 @@ package cn.edu.gdou.jingbanyou.common.core.domain.model;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -74,6 +75,11 @@ public class LoginUser implements UserDetails
      * 用户信息
      */
     private SysUser user;
+
+    /**
+     * 缓存的权限列表（避免每次调用 getAuthorities 时重新转换）
+     */
+    private transient List<GrantedAuthority> authorities;
 
     public LoginUser()
     {
@@ -148,14 +154,15 @@ public class LoginUser implements UserDetails
 
     /**
      * 指定用户是否解锁,锁定的用户无法进行身份验证
-     * 
+     * 状态 "1" 表示停用（锁定），非 "1" 表示正常
+     *
      * @return
      */
     @JSONField(serialize = false)
     @Override
     public boolean isAccountNonLocked()
     {
-        return true;
+        return !"1".equals(user.getStatus());
     }
 
     /**
@@ -172,14 +179,15 @@ public class LoginUser implements UserDetails
 
     /**
      * 是否可用 ,禁用的用户不能身份验证
-     * 
+     * 状态 "0" 表示正常，其他值表示禁用
+     *
      * @return
      */
     @JSONField(serialize = false)
     @Override
     public boolean isEnabled()
     {
-        return true;
+        return "0".equals(user.getStatus());
     }
 
     public Long getLoginTime()
@@ -266,13 +274,19 @@ public class LoginUser implements UserDetails
     @JSONField(serialize = false)
     public Collection<? extends GrantedAuthority> getAuthorities()
     {
+        if (authorities != null)
+        {
+            return authorities;
+        }
         if (permissions == null || permissions.isEmpty())
         {
-            return Collections.emptyList();
+            authorities = Collections.emptyList();
+            return authorities;
         }
-        return permissions.stream()
+        authorities = permissions.stream()
             .filter(Objects::nonNull)
             .map(SimpleGrantedAuthority::new)
             .collect(Collectors.toList());
+        return authorities;
     }
 }

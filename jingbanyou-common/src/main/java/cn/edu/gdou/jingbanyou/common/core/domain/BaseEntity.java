@@ -38,7 +38,14 @@ public class BaseEntity implements Serializable
     /** 备注 */
     private String remark;
 
-    /** 请求参数 */
+    /**
+     * 请求参数
+     * 用于数据权限过滤传递，常见键名：
+     * - beginTime: 搜索开始时间（yyyy-MM-dd）
+     * - endTime: 搜索结束时间（yyyy-MM-dd）
+     * - deptId: 部门ID（用于数据权限）
+     * - orderByClause: 排序子句
+     */
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> params;
 

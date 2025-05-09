@@ -3,6 +3,7 @@ package cn.edu.gdou.jingbanyou.common.utils;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,6 +21,20 @@ import cn.edu.gdou.jingbanyou.common.exception.ServiceException;
  */
 public class SecurityUtils
 {
+
+    /** 超级管理员ID配置键 */
+    public static final String SUPER_ADMIN_ID_KEY = "sys.user.superAdminId";
+
+    /** 默认超级管理员ID */
+    public static final long DEFAULT_SUPER_ADMIN_ID = 1L;
+
+    /** 当前生效的超级管理员ID */
+    private static long superAdminId = DEFAULT_SUPER_ADMIN_ID;
+
+    @Value("${sys.user.super-admin-id:#{T(cn.edu.gdou.jingbanyou.common.utils.SecurityUtils).DEFAULT_SUPER_ADMIN_ID}}")
+    public void setSuperAdminId(long id) {
+        SecurityUtils.superAdminId = id;
+    }
 
     /**
      * 用户ID
@@ -132,7 +147,7 @@ public class SecurityUtils
      */
     public static boolean isAdmin(Long userId)
     {
-        return userId != null && 1L == userId;
+        return userId != null && superAdminId == userId;
     }
 
     /**

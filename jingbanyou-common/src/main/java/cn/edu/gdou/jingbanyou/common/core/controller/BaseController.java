@@ -15,11 +15,13 @@ import cn.edu.gdou.jingbanyou.common.core.domain.model.LoginUser;
 import cn.edu.gdou.jingbanyou.common.core.page.PageDomain;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.core.page.TableSupport;
+import cn.edu.gdou.jingbanyou.common.exception.ServiceException;
 import cn.edu.gdou.jingbanyou.common.utils.DateUtils;
 import cn.edu.gdou.jingbanyou.common.utils.PageUtils;
 import cn.edu.gdou.jingbanyou.common.utils.SecurityUtils;
 import cn.edu.gdou.jingbanyou.common.utils.StringUtils;
 import cn.edu.gdou.jingbanyou.common.utils.sql.SqlUtil;
+import cn.edu.gdou.jingbanyou.common.enums.TouristErrorCode;
 
 /**
  * web层通用数据处理
@@ -80,13 +82,13 @@ public class BaseController
      * 响应请求分页数据
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    protected TableDataInfo getDataTable(List<?> list)
+    protected TableDataInfo getDataTable(List<?> list, long total)
     {
         TableDataInfo rspData = new TableDataInfo();
         rspData.setCode(HttpStatus.SUCCESS);
         rspData.setMsg("查询成功");
         rspData.setRows(list);
-        rspData.setTotal(new PageInfo(list).getTotal());
+        rspData.setTotal(total);
         return rspData;
     }
 
@@ -128,6 +130,14 @@ public class BaseController
     public AjaxResult error(String message)
     {
         return AjaxResult.error(message);
+    }
+
+    /**
+     * 返回失败消息（使用错误码枚举）
+     */
+    public AjaxResult error(TouristErrorCode errorCode, Object... args)
+    {
+        return errorCode.toAjaxResult(args);
     }
 
     /**
@@ -197,6 +207,11 @@ public class BaseController
      */
     public String getUsername()
     {
-        return getLoginUser().getUsername();
+        LoginUser loginUser = getLoginUser();
+        if (loginUser == null || loginUser.getUser() == null)
+        {
+            throw new ServiceException("用户未登录", 401);
+        }
+        return loginUser.getUser().getUserName();
     }
 }

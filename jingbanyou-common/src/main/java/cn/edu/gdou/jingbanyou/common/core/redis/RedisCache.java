@@ -265,4 +265,40 @@ public class RedisCache
     {
         return redisTemplate.keys(pattern);
     }
+
+    /**
+     * ZSet add
+     *
+     * @param key 键
+     * @param value 值
+     * @param score 分数（时间戳）
+     */
+    public <T> boolean zAdd(final String key, final T value, final double score)
+    {
+        return redisTemplate.opsForZSet().add(key, value, score);
+    }
+
+    /**
+     * ZSet count（按 score 区间统计数量）
+     *
+     * @param key 键
+     * @param min 最小 score
+     * @param max 最大 score
+     * @return 数量
+     */
+    public Long zCount(final String key, final double min, final double max)
+    {
+        return redisTemplate.opsForZSet().count(key, min, max);
+    }
+
+    /**
+     * ZSet size（总数）
+     *
+     * @param key 键
+     * @return 集合大小
+     */
+    public Long zCard(final String key)
+    {
+        return redisTemplate.opsForZSet().size(key);
+    }
 }
