@@ -25,7 +25,7 @@ import cn.edu.gdou.jingbanyou.common.utils.ip.IpUtils;
  * @author ruoyi
  */
 @Aspect
-@Component
+@Component("jingbanyouRateLimiterAspect")
 public class RateLimiterAspect
 {
     private static final Logger log = LoggerFactory.getLogger(RateLimiterAspect.class);

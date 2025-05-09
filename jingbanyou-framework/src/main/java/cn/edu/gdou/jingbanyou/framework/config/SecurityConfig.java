@@ -104,6 +104,8 @@ public class SecurityConfig
                     // 静态资源，可匿名访问
                     .requestMatchers(HttpMethod.GET, "/", "/*.html", "/**.html", "/**.css", "/**.js", "/profile/**").permitAll()
                     .requestMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/druid/**").permitAll()
+                    // 游客端接口放行，由 TouristSessionFilter 做会话管理
+                    .requestMatchers("/tourist/**").permitAll()
                     // 除上面外的所有请求全部需要鉴权认证
                     .anyRequest().authenticated();
             })
@@ -123,6 +125,6 @@ public class SecurityConfig
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder()
     {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(12);
     }
 }

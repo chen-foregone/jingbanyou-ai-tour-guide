@@ -18,7 +18,7 @@ import cn.edu.gdou.jingbanyou.framework.web.service.TokenService;
 
 /**
  * token过滤器 验证token有效性
- * 
+ *
  * @author ruoyi
  */
 @Component
@@ -28,17 +28,31 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter
     private TokenService tokenService;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        // 游客端接口由 TouristSessionFilter 处理会话，不走 JWT 认证
+        return path.startsWith("/tourist");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException
     {
-        LoginUser loginUser = tokenService.getLoginUser(request);
-        if (StringUtils.isNotNull(loginUser) && StringUtils.isNull(SecurityUtils.getAuthentication()))
+        try
         {
-            tokenService.verifyToken(loginUser);
-            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities());
-            authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            LoginUser loginUser = tokenService.getLoginUser(request);
+            if (StringUtils.isNotNull(loginUser) && StringUtils.isNull(SecurityUtils.getAuthentication()))
+            {
+                tokenService.verifyToken(loginUser);
+                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities());
+                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            }
+            chain.doFilter(request, response);
         }
-        chain.doFilter(request, response);
+        finally
+        {
+            SecurityContextHolder.clearContext();
+        }
     }
 }

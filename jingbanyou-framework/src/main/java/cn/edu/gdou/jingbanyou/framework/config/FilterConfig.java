@@ -12,6 +12,8 @@ import cn.edu.gdou.jingbanyou.common.constant.Constants;
 import cn.edu.gdou.jingbanyou.common.filter.RefererFilter;
 import cn.edu.gdou.jingbanyou.common.filter.RepeatableFilter;
 import cn.edu.gdou.jingbanyou.common.filter.XssFilter;
+import cn.edu.gdou.jingbanyou.framework.filter.TouristRateLimitFilter;
+import cn.edu.gdou.jingbanyou.framework.filter.TouristSessionFilter;
 import cn.edu.gdou.jingbanyou.common.utils.StringUtils;
 
 /**
@@ -74,6 +76,33 @@ public class FilterConfig
         registration.addUrlPatterns("/*");
         registration.setName("repeatableFilter");
         registration.setOrder(FilterRegistrationBean.LOWEST_PRECEDENCE);
+        return registration;
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Bean
+    @ConditionalOnProperty(value = "tourist.rate-limit.enabled", havingValue = "true")
+    public FilterRegistrationBean touristRateLimitFilterRegistration(TouristRateLimitFilter touristRateLimitFilter)
+    {
+        FilterRegistrationBean registration = new FilterRegistrationBean();
+        registration.setFilter(touristRateLimitFilter);
+        registration.addUrlPatterns("/tourist/*");
+        registration.setName("touristRateLimitFilter");
+        // 运行在安全过滤器链之后
+        registration.setOrder(FilterRegistrationBean.LOWEST_PRECEDENCE - 10);
+        return registration;
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Bean
+    public FilterRegistrationBean touristSessionFilterRegistration(TouristSessionFilter touristSessionFilter)
+    {
+        FilterRegistrationBean registration = new FilterRegistrationBean();
+        registration.setFilter(touristSessionFilter);
+        registration.addUrlPatterns("/tourist/*");
+        registration.setName("touristSessionFilter");
+        // 运行在限流过滤器之后
+        registration.setOrder(FilterRegistrationBean.LOWEST_PRECEDENCE - 9);
         return registration;
     }
 
