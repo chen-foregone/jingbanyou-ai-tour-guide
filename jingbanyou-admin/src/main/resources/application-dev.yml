@@ -1,0 +1,6 @@
+# 开发环境配置（使用 dev profile 激活）
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
