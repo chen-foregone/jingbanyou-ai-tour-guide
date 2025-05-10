@@ -4,13 +4,17 @@ import cn.edu.gdou.jingbanyou.common.annotation.Log;
 import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
+import cn.edu.gdou.jingbanyou.manage.dto.response.HotQuestionsResponse;
+import cn.edu.gdou.jingbanyou.manage.dto.response.OperationOverviewResponse;
+import cn.edu.gdou.jingbanyou.manage.dto.response.WeeklyStatsResponse;
 import cn.edu.gdou.jingbanyou.manage.service.IOperationStatsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.time.LocalDate;
 
 /**
  * 运营数据统计
@@ -33,7 +37,7 @@ public class OperationStatsController extends BaseController {
      */
     @GetMapping("/today-overview")
     public AjaxResult getTodayOverview(@RequestParam Long scenicId) {
-        Map<String, Object> overview = statsService.getTodayOverview(scenicId);
+        OperationOverviewResponse overview = statsService.getTodayOverview(scenicId);
         return success(overview);
     }
 
@@ -44,7 +48,7 @@ public class OperationStatsController extends BaseController {
      */
     @GetMapping("/weekly-stats")
     public AjaxResult getWeeklyStats(@RequestParam Long scenicId) {
-        Map<String, Object> stats = statsService.getWeeklyStats(scenicId);
+        WeeklyStatsResponse stats = statsService.getWeeklyStats(scenicId);
         return success(stats);
     }
 
@@ -57,7 +61,7 @@ public class OperationStatsController extends BaseController {
     @GetMapping("/hot-questions")
     public AjaxResult getHotQuestions(@RequestParam Long scenicId,
                                       @RequestParam(defaultValue = "10") Integer limit) {
-        Map<String, Object> questions = statsService.getHotQuestions(scenicId, limit);
+        HotQuestionsResponse questions = statsService.getHotQuestions(scenicId, limit);
         return success(questions);
     }
 
@@ -70,7 +74,7 @@ public class OperationStatsController extends BaseController {
     @Log(title = "统计数据", businessType = BusinessType.INSERT)
     @PostMapping("/generate")
     public AjaxResult generateStats(@RequestParam Long scenicId,
-                                     @RequestParam String date,
+                                     @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
                                      @RequestParam(defaultValue = "daily") String type) {
         statsService.generateStats(scenicId, date, type);
         return success();

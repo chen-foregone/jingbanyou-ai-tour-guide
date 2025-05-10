@@ -11,6 +11,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,9 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
 
     private final VectorStore redisVectorStore;
 
+    @Value("${jingbanyou.faq.similarity-threshold:0.75}")
+    private double similarityThreshold;
+
     public FaqServiceImpl(@Qualifier("faqVectorStore") VectorStore redisVectorStore) {
         this.redisVectorStore = redisVectorStore;
     }
@@ -43,10 +47,13 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
      */
     @Override
     public Faq matchSimilarQuestion(Long scenicId, String question) {
+        if (scenicId == null || scenicId <= 0) {
+            throw new IllegalArgumentException("scenicId must be a positive integer");
+        }
         SearchRequest request = SearchRequest.builder()
                 .query(question)
                 .topK(1)
-                .similarityThreshold(0.75)
+                .similarityThreshold(similarityThreshold)
                 .filterExpression("scenicId == '" + scenicId + "'")
                 .build();
 
@@ -72,6 +79,12 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
      */
     @Override
     public void vectorizeFaq(Faq faq) {
+        // 先清理旧向量（如果存在），避免残留
+        if (faq.getVectorId() != null && !faq.getVectorId().isBlank()) {
+            redisVectorStore.delete(List.of(faq.getVectorId()));
+            log.info("已删除 FAQ 旧向量: faqId={}, oldVectorId={}", faq.getId(), faq.getVectorId());
+        }
+
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("faqId", String.valueOf(faq.getId()));
         metadata.put("scenicId", String.valueOf(faq.getScenicId()));
@@ -141,6 +154,9 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
      */
     @Override
     public FaqMatchResult matchWithScore(Long scenicId, String question, double threshold) {
+        if (scenicId == null || scenicId <= 0) {
+            throw new IllegalArgumentException("scenicId must be a positive integer");
+        }
         SearchRequest request = SearchRequest.builder()
                 .query(question)
                 .topK(3)
@@ -157,9 +173,10 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
         // 打印 top3 分数分布，用于调优阈值
         for (int i = 0; i < results.size(); i++) {
             Document d = results.get(i);
-            log.info("[RAG预检-debug] scenicId={}, question={}, top={}, score={}, text={}",
-                    scenicId, question, i + 1, d.getScore(),
-                    d.getText().length() > 30 ? d.getText().substring(0, 30) + "..." : d.getText());
+            String textPreview = d.getText().length() > 50 ? d.getText().substring(0, 50) + "..." : d.getText();
+            log.debug("[RAG预检-debug] scenicId={}, question={}, top={}, score={}, text={}",
+                    scenicId, question.length() > 50 ? question.substring(0, 50) + "..." : question,
+                    i + 1, d.getScore(), textPreview);
         }
 
         Document doc = results.get(0);

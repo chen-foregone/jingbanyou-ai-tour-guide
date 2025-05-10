@@ -7,6 +7,7 @@ import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
 import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
+import com.github.pagehelper.PageInfo;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +32,10 @@ public class DigitalHumanController extends BaseController {
 
     /** 查询数字人列表 */
     @GetMapping("/list")
-    public TableDataInfo list() {
+    public TableDataInfo list(@RequestParam(required = false) Long scenicId) {
         startPage();
-        List<DigitalHumanConfig> list = digitalHumanService.list();
-        return getDataTable(list);
+        List<DigitalHumanConfig> list = digitalHumanService.list(scenicId);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /** 查询数字人详情 */
@@ -75,6 +76,10 @@ public class DigitalHumanController extends BaseController {
     @Log(title = "数字人管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
     public AjaxResult remove(@PathVariable Long id) {
+        DigitalHumanConfig dh = digitalHumanService.getById(id);
+        if (dh != null && dh.getIsDefault() != null && dh.getIsDefault() == 1) {
+            return error("请先设置新的默认数字人再删除");
+        }
         return toAjax(digitalHumanService.removeById(id));
     }
 }

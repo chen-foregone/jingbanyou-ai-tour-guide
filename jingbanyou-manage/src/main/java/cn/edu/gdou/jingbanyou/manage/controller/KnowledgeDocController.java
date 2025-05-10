@@ -50,7 +50,7 @@ public class KnowledgeDocController extends BaseController {
         } else {
             list = knowledgeDocService.list();
         }
-        return getDataTable(list.stream().map(this::convertToVO).collect(Collectors.toList()));
+        return getDataTable(list.stream().map(doc -> convertToVO(doc, true)).collect(Collectors.toList()), list.size());
     }
 
     /** 查询知识库详情 */
@@ -116,8 +116,22 @@ public class KnowledgeDocController extends BaseController {
     }
 
     private KnowledgeDocVO convertToVO(KnowledgeDoc doc) {
+        return convertToVO(doc, false);
+    }
+
+    /**
+     * 转换为 VO
+     *
+     * @param doc 知识库文档实体
+     * @param truncateContent 是否截断文档内容（列表页截断，详情页不截断）
+     * @return 知识库文档 VO
+     */
+    private KnowledgeDocVO convertToVO(KnowledgeDoc doc, boolean truncateContent) {
         KnowledgeDocVO vo = new KnowledgeDocVO();
         BeanUtils.copyProperties(doc, vo);
+        if (truncateContent && vo.getDocContent() != null && vo.getDocContent().length() > 200) {
+            vo.setDocContent(vo.getDocContent().substring(0, 200) + "...");
+        }
         return vo;
     }
 }

@@ -7,6 +7,7 @@ import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.manage.entity.Faq;
 import cn.edu.gdou.jingbanyou.manage.service.IFaqService;
+import com.github.pagehelper.PageInfo;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ public class FaqController extends BaseController {
         } else {
             list = faqService.list();
         }
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /** 查询FAQ详情 */

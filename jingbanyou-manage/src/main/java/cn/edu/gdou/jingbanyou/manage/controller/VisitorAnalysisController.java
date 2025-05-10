@@ -4,6 +4,9 @@ import cn.edu.gdou.jingbanyou.common.annotation.Log;
 import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
+import cn.edu.gdou.jingbanyou.manage.dto.response.EmotionTrendResponse;
+import cn.edu.gdou.jingbanyou.manage.dto.response.FocusPointsResponse;
+import cn.edu.gdou.jingbanyou.manage.dto.response.SatisfactionTrendResponse;
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorAnalysis;
 import cn.edu.gdou.jingbanyou.manage.service.IVisitorAnalysisService;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +16,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.Map;
 
 /**
  * 游客感受度分析
@@ -38,9 +40,9 @@ public class VisitorAnalysisController extends BaseController {
      */
     @GetMapping("/emotion-trend")
     public AjaxResult getEmotionTrend(@RequestParam Long scenicId,
-                                       @RequestParam String startDate,
-                                       @RequestParam String endDate) {
-        Map<String, Object> trend = analysisService.getEmotionTrend(scenicId, startDate, endDate);
+                                       @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                                       @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        EmotionTrendResponse trend = analysisService.getEmotionTrend(scenicId, startDate, endDate);
         return success(trend);
     }
 
@@ -53,7 +55,7 @@ public class VisitorAnalysisController extends BaseController {
     @GetMapping("/focus-points")
     public AjaxResult getFocusPoints(@RequestParam Long scenicId,
                                       @RequestParam(defaultValue = "10") Integer limit) {
-        Map<String, Object> points = analysisService.getFocusPoints(scenicId, limit);
+        FocusPointsResponse points = analysisService.getFocusPoints(scenicId, limit);
         return success(points);
     }
 
@@ -65,8 +67,8 @@ public class VisitorAnalysisController extends BaseController {
      */
     @GetMapping("/satisfaction-trend")
     public AjaxResult getSatisfactionTrend(@RequestParam Long scenicId,
-                                            @RequestParam(defaultValue = "30") Integer days) {
-        Map<String, Object> trend = analysisService.getSatisfactionTrend(scenicId, days);
+                                             @RequestParam(defaultValue = "30") Integer days) {
+        SatisfactionTrendResponse trend = analysisService.getSatisfactionTrend(scenicId, days);
         return success(trend);
     }
 

@@ -1,6 +1,11 @@
 package cn.edu.gdou.jingbanyou.manage.service.impl;
 
 import cn.edu.gdou.jingbanyou.manage.dto.EmotionTrendVO;
+import cn.edu.gdou.jingbanyou.manage.dto.FocusPointVO;
+import cn.edu.gdou.jingbanyou.manage.dto.SatisfactionTrendVO;
+import cn.edu.gdou.jingbanyou.manage.dto.response.EmotionTrendResponse;
+import cn.edu.gdou.jingbanyou.manage.dto.response.FocusPointsResponse;
+import cn.edu.gdou.jingbanyou.manage.dto.response.SatisfactionTrendResponse;
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorAnalysis;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorAnalysisMapper;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper;
@@ -14,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +58,7 @@ public class VisitorAnalysisServiceImpl extends ServiceImpl<VisitorAnalysisMappe
         }
 
         // 查询关注点分布
-        List<Map<String, Object>> focusPoints = visitorInteractionMapper.selectIntentDistribution(scenicId, 10);
+        List<FocusPointVO> focusPoints = visitorInteractionMapper.selectIntentDistribution(scenicId, 10);
 
         // 构建日报实体
         VisitorAnalysis analysis = new VisitorAnalysis();
@@ -74,9 +78,22 @@ public class VisitorAnalysisServiceImpl extends ServiceImpl<VisitorAnalysisMappe
         analysis.setAiGenerated(1);
         analysis.setCreateTime(new Date());
 
-        // 保存
-        save(analysis);
-        log.info("日报分析生成成功：scenicId={}, date={}, id={}", scenicId, dateStr, analysis.getId());
+        // 按唯一键查询：存在则更新，不存在则新增
+        VisitorAnalysis existing = lambdaQuery()
+                .eq(VisitorAnalysis::getScenicId, scenicId)
+                .eq(VisitorAnalysis::getStatsDate, analysis.getStatsDate())
+                .eq(VisitorAnalysis::getStatsType, "daily")
+                .one();
+
+        if (existing != null) {
+            analysis.setId(existing.getId());
+            analysis.setUpdateTime(new Date());
+            updateById(analysis);
+            log.info("日报分析更新成功：scenicId={}, date={}, id={}", scenicId, dateStr, analysis.getId());
+        } else {
+            save(analysis);
+            log.info("日报分析生成成功：scenicId={}, date={}, id={}", scenicId, dateStr, analysis.getId());
+        }
         return analysis;
     }
 
@@ -86,14 +103,14 @@ public class VisitorAnalysisServiceImpl extends ServiceImpl<VisitorAnalysisMappe
      * @param scenicId 景区ID
      * @param startDate 开始日期
      * @param endDate 结束日期
-     * @return 包含 trend 列表的结果
+     * @return 情感趋势数据响应
      */
     @Override
-    public Map<String, Object> getEmotionTrend(Long scenicId, String startDate, String endDate) {
-        Map<String, Object> result = new HashMap<>();
-        List<EmotionTrendVO> trend = visitorInteractionMapper.selectEmotionTrend(scenicId, startDate, endDate);
-        result.put("trend", trend);
-        return result;
+    public EmotionTrendResponse getEmotionTrend(Long scenicId, LocalDate startDate, LocalDate endDate) {
+        List<EmotionTrendVO> trend = visitorInteractionMapper.selectEmotionTrend(scenicId, startDate.toString(), endDate.toString());
+        return EmotionTrendResponse.builder()
+                .trend(trend)
+                .build();
     }
 
     /**
@@ -101,14 +118,14 @@ public class VisitorAnalysisServiceImpl extends ServiceImpl<VisitorAnalysisMappe
      *
      * @param scenicId 景区ID
      * @param limit 条数限制
-     * @return 包含 focusPoints 列表的结果
+     * @return 关注点列表响应
      */
     @Override
-    public Map<String, Object> getFocusPoints(Long scenicId, Integer limit) {
-        Map<String, Object> result = new HashMap<>();
-        List<Map<String, Object>> points = visitorInteractionMapper.selectIntentDistribution(scenicId, limit != null ? limit : 10);
-        result.put("focusPoints", points);
-        return result;
+    public FocusPointsResponse getFocusPoints(Long scenicId, Integer limit) {
+        List<FocusPointVO> points = visitorInteractionMapper.selectIntentDistribution(scenicId, limit != null ? limit : 10);
+        return FocusPointsResponse.builder()
+                .focusPoints(points)
+                .build();
     }
 
     /**
@@ -116,13 +133,13 @@ public class VisitorAnalysisServiceImpl extends ServiceImpl<VisitorAnalysisMappe
      *
      * @param scenicId 景区ID
      * @param days 天数
-     * @return 包含 trend 列表的结果
+     * @return 满意度趋势数据响应
      */
     @Override
-    public Map<String, Object> getSatisfactionTrend(Long scenicId, Integer days) {
-        Map<String, Object> result = new HashMap<>();
-        List<Map<String, Object>> trend = visitorInteractionMapper.selectSatisfactionTrend(scenicId, days != null ? days : 30);
-        result.put("trend", trend);
-        return result;
+    public SatisfactionTrendResponse getSatisfactionTrend(Long scenicId, Integer days) {
+        List<SatisfactionTrendVO> trend = visitorInteractionMapper.selectSatisfactionTrend(scenicId, days != null ? days : 30);
+        return SatisfactionTrendResponse.builder()
+                .trend(trend)
+                .build();
     }
 }

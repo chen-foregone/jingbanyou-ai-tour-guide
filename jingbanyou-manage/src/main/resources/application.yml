@@ -1,0 +1,20 @@
+# 景伴游 AI 配置
+jingbanyou:
+  knowledge-doc:
+    chunk:
+      # 讲解词(docType=1)
+      type1:
+        chunk-size: 400
+        overlap: 50
+      # 文史资料(docType=2)
+      type2:
+        chunk-size: 600
+        overlap: 100
+      # 攻略(docType=3)
+      type3:
+        chunk-size: 800
+        overlap: 100
+      # 公告(docType=4)
+      type4:
+        chunk-size: 300
+        overlap: 30

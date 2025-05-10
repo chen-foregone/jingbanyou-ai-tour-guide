@@ -27,6 +27,9 @@ public class OperationOverviewVO implements Serializable
     /** 今日独立访客数 */
     private Integer uniqueVisitors;
 
+    /** 实时在线游客数（Redis 2小时心跳） */
+    private Integer onlineVisitors;
+
     /** 平均响应时间(ms) */
     private Integer avgResponseTimeMs;
 

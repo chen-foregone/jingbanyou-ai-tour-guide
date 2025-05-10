@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * AI 数字人形象配置 Service 实现类
  *
@@ -53,5 +55,20 @@ public class DigitalHumanConfigServiceImpl extends ServiceImpl<DigitalHumanConfi
                 .eq(DigitalHumanConfig::getId, id)
                 .eq(DigitalHumanConfig::getScenicId, scenicId));
         log.info("设置默认数字人成功：id={}, scenicId={}", id, scenicId);
+    }
+
+    /**
+     * 查询数字人列表（可选按景区过滤）
+     *
+     * @param scenicId 景区ID（可选，为 null 时返回全部）
+     * @return 数字人列表
+     */
+    @Override
+    public List<DigitalHumanConfig> list(Long scenicId) {
+        if (scenicId == null) {
+            return list();
+        }
+        return list(new LambdaQueryWrapper<DigitalHumanConfig>()
+                .eq(DigitalHumanConfig::getScenicId, scenicId));
     }
 }

@@ -102,7 +102,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <!-- 意图类型分布（关注点） -->
-    <select id="selectIntentDistribution" resultType="java.util.Map">
+    <select id="selectIntentDistribution" resultType="cn.edu.gdou.jingbanyou.manage.dto.FocusPointVO">
         SELECT
             IFNULL(intent_type, 'other')                                    AS intentType,
             COUNT(*)                                                        AS count
@@ -117,7 +117,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <!-- 满意度趋势（最近N天） -->
-    <select id="selectSatisfactionTrend" resultType="java.util.Map">
+    <select id="selectSatisfactionTrend" resultType="cn.edu.gdou.jingbanyou.manage.dto.SatisfactionTrendVO">
         SELECT
             DATE(create_time)                                               AS date,
             IFNULL(AVG(feedback_score), 0)                                  AS avgScore

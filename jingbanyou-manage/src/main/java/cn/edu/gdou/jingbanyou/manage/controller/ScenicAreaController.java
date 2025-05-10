@@ -9,6 +9,7 @@ import cn.edu.gdou.jingbanyou.common.utils.poi.ExcelUtil;
 import cn.edu.gdou.jingbanyou.manage.dto.ScenicAreaVO;
 import cn.edu.gdou.jingbanyou.manage.entity.ScenicArea;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
+import com.github.pagehelper.PageInfo;
 import cn.hutool.core.bean.BeanUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -40,7 +41,7 @@ public class ScenicAreaController extends BaseController {
         startPage();
         List<ScenicArea> list = scenicAreaService.list();
         List<ScenicAreaVO> voList = BeanUtil.copyToList(list, ScenicAreaVO.class);
-        return getDataTable(voList);
+        return getDataTable(voList, new PageInfo(list).getTotal());
     }
 
     /** 查询景区详情 */
@@ -87,7 +88,7 @@ public class ScenicAreaController extends BaseController {
             return error("仅支持 .xlsx 或 .xls 格式");
         }
         try {
-            String result = scenicAreaService.importFromExcel(file, 1L);
+            String result = scenicAreaService.importFromExcel(file, getUserId());
             return success(result);
         } catch (Exception e) {
             log.error("景区Excel导入失败", e);

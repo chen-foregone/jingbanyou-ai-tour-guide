@@ -6,6 +6,7 @@ import cn.edu.gdou.jingbanyou.manage.mapper.KnowledgeChunkMapper;
 import cn.edu.gdou.jingbanyou.manage.mapper.KnowledgeDocMapper;
 import cn.edu.gdou.jingbanyou.manage.service.IKnowledgeDocService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -37,12 +38,72 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
     @Value("${spring.ai.dashscope.embedding.options.model:text-embedding-v2}")
     private String embeddingModel;
 
+    /** 讲解词(docType=1) chunk size */
+    @Value("${jingbanyou.knowledge-doc.chunk.type1.chunk-size:400}")
+    private int chunkSize1;
+
+    /** 讲解词(docType=1) overlap */
+    @Value("${jingbanyou.knowledge-doc.chunk.type1.overlap:50}")
+    private int overlap1;
+
+    /** 文史资料(docType=2) chunk size */
+    @Value("${jingbanyou.knowledge-doc.chunk.type2.chunk-size:600}")
+    private int chunkSize2;
+
+    /** 文史资料(docType=2) overlap */
+    @Value("${jingbanyou.knowledge-doc.chunk.type2.overlap:100}")
+    private int overlap2;
+
+    /** 攻略(docType=3) chunk size */
+    @Value("${jingbanyou.knowledge-doc.chunk.type3.chunk-size:800}")
+    private int chunkSize3;
+
+    /** 攻略(docType=3) overlap */
+    @Value("${jingbanyou.knowledge-doc.chunk.type3.overlap:100}")
+    private int overlap3;
+
+    /** 公告(docType=4) chunk size */
+    @Value("${jingbanyou.knowledge-doc.chunk.type4.chunk-size:300}")
+    private int chunkSize4;
+
+    /** 公告(docType=4) overlap */
+    @Value("${jingbanyou.knowledge-doc.chunk.type4.overlap:30}")
+    private int overlap4;
+
     public KnowledgeDocServiceImpl(KnowledgeChunkMapper knowledgeChunkMapper,
                                   @Qualifier("knowledgeVectorStore") VectorStore knowledgeVectorStore,
                                   ObjectMapper objectMapper) {
         this.knowledgeChunkMapper = knowledgeChunkMapper;
         this.knowledgeVectorStore = knowledgeVectorStore;
         this.objectMapper = objectMapper;
+    }
+
+    /**
+     * 根据文档类型获取对应的 TokenTextSplitter
+     *
+     * @param docType 文档类型
+     * @return 配置好的 TokenTextSplitter
+     */
+    private TokenTextSplitter getSplitterByDocType(String docType) {
+        int chunkSize;
+        switch (docType != null ? docType : "1") {
+            case "2":
+                chunkSize = chunkSize2;
+                break;
+            case "3":
+                chunkSize = chunkSize3;
+                break;
+            case "4":
+                chunkSize = chunkSize4;
+                break;
+            default:
+                chunkSize = chunkSize1;
+        }
+        return TokenTextSplitter.builder()
+                .withChunkSize(chunkSize)
+                .withMinChunkSizeChars(10)
+                .withMaxNumChunks(100)
+                .build();
     }
 
     /**
@@ -66,8 +127,8 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         // 1-2. 清理旧 chunk 和旧向量（抽取公共方法复用）
         deleteChunksAndVectors(docId);
 
-        // 3. 切分文档
-        TokenTextSplitter splitter = new TokenTextSplitter();
+        // 3. 切分文档（根据 docType 使用不同 chunk 参数）
+        TokenTextSplitter splitter = getSplitterByDocType(doc.getDocType());
         Document sourceDoc = new Document(doc.getDocContent());
         List<Document> splitDocs = splitter.split(sourceDoc);
 
@@ -170,48 +231,87 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
     /**
      * 批量向量化（只处理 vectorized=0 的文档）
      *
+     * 语义说明：尽力处理（best-effort），允许部分失败。失败的文档 ID 会记录到日志，
+     * 可通过 batchVectorizeByScenic 重新处理。单个文档的 vectorizeDoc 方法有独立事务保障。
+     *
      * @return 成功向量化的数量
      */
     @Override
     public int batchVectorize() {
-        List<KnowledgeDoc> pending = list(new LambdaQueryWrapper<KnowledgeDoc>()
-                .eq(KnowledgeDoc::getVectorized, 0)
-                .eq(KnowledgeDoc::getStatus, 1));
-        int count = 0;
-        for (KnowledgeDoc doc : pending) {
-            try {
-                vectorizeDoc(doc.getId());
-                count++;
-            } catch (Exception e) {
-                log.error("向量化失败: docId={}", doc.getId(), e);
+        int totalSuccess = 0;
+        int currentPage = 1;
+        final int pageSize = 100;
+
+        while (true) {
+            Page<KnowledgeDoc> page = new Page<>(currentPage, pageSize);
+            page = page(page, new LambdaQueryWrapper<KnowledgeDoc>()
+                    .eq(KnowledgeDoc::getVectorized, 0)
+                    .eq(KnowledgeDoc::getStatus, 1));
+
+            if (page.getRecords() == null || page.getRecords().isEmpty()) {
+                break;
             }
+
+            for (KnowledgeDoc doc : page.getRecords()) {
+                try {
+                    vectorizeDoc(doc.getId());
+                    totalSuccess++;
+                } catch (Exception e) {
+                    log.error("向量化失败: docId={}", doc.getId(), e);
+                }
+            }
+
+            if (currentPage >= page.getPages()) {
+                break;
+            }
+            currentPage++;
         }
-        log.info("批量向量化完成: 共处理 {} 条", count);
-        return count;
+
+        log.info("批量向量化完成: 共处理 {} 条", totalSuccess);
+        return totalSuccess;
     }
 
     /**
      * 按景区 ID 批量向量化（只处理指定景区下 vectorized=0 的文档）
+     *
+     * 语义说明：尽力处理（best-effort），允许部分失败。失败的文档 ID 会记录到日志。
      *
      * @param scenicId 景区ID
      * @return 成功向量化的数量
      */
     @Override
     public int batchVectorizeByScenic(Long scenicId) {
-        List<KnowledgeDoc> pending = list(new LambdaQueryWrapper<KnowledgeDoc>()
-                .eq(KnowledgeDoc::getScenicId, scenicId)
-                .eq(KnowledgeDoc::getVectorized, 0)
-                .eq(KnowledgeDoc::getStatus, 1));
-        int count = 0;
-        for (KnowledgeDoc doc : pending) {
-            try {
-                vectorizeDoc(doc.getId());
-                count++;
-            } catch (Exception e) {
-                log.error("向量化失败: docId={}", doc.getId(), e);
+        int totalSuccess = 0;
+        int currentPage = 1;
+        final int pageSize = 100;
+
+        while (true) {
+            Page<KnowledgeDoc> page = new Page<>(currentPage, pageSize);
+            page = page(page, new LambdaQueryWrapper<KnowledgeDoc>()
+                    .eq(KnowledgeDoc::getScenicId, scenicId)
+                    .eq(KnowledgeDoc::getVectorized, 0)
+                    .eq(KnowledgeDoc::getStatus, 1));
+
+            if (page.getRecords() == null || page.getRecords().isEmpty()) {
+                break;
             }
+
+            for (KnowledgeDoc doc : page.getRecords()) {
+                try {
+                    vectorizeDoc(doc.getId());
+                    totalSuccess++;
+                } catch (Exception e) {
+                    log.error("向量化失败: docId={}", doc.getId(), e);
+                }
+            }
+
+            if (currentPage >= page.getPages()) {
+                break;
+            }
+            currentPage++;
         }
-        log.info("景区 {} 批量向量化完成: 共处理 {} 条", scenicId, count);
-        return count;
+
+        log.info("景区 {} 批量向量化完成: 共处理 {} 条", scenicId, totalSuccess);
+        return totalSuccess;
     }
 }

@@ -1,7 +1,9 @@
 package cn.edu.gdou.jingbanyou.manage.service.impl;
 
+import cn.edu.gdou.jingbanyou.manage.entity.Faq;
 import cn.edu.gdou.jingbanyou.manage.entity.RouteSpotRelation;
 import cn.edu.gdou.jingbanyou.manage.entity.ScenicSpot;
+import cn.edu.gdou.jingbanyou.manage.mapper.FaqMapper;
 import cn.edu.gdou.jingbanyou.manage.mapper.RouteSpotRelationMapper;
 import cn.edu.gdou.jingbanyou.manage.mapper.ScenicSpotMapper;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicSpotService;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ScenicSpotServiceImpl extends ServiceImpl<ScenicSpotMapper, ScenicSpot> implements IScenicSpotService {
 
     private final RouteSpotRelationMapper routeSpotRelationMapper;
+    private final FaqMapper faqMapper;
 
     /**
      * 删除景点并清理路线关联
@@ -34,6 +37,8 @@ public class ScenicSpotServiceImpl extends ServiceImpl<ScenicSpotMapper, ScenicS
     public void removeSpotWithRelations(Long id) {
         routeSpotRelationMapper.delete(new LambdaQueryWrapper<RouteSpotRelation>()
                 .eq(RouteSpotRelation::getSpotId, id));
+        faqMapper.delete(new LambdaQueryWrapper<Faq>()
+                .eq(Faq::getSpotId, id));
         removeById(id);
         log.info("删除景点及其路线关联，spotId={}", id);
     }

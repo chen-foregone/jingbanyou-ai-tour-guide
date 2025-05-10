@@ -7,6 +7,7 @@ import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.manage.entity.ScenicSpot;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicSpotService;
+import com.github.pagehelper.PageInfo;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class ScenicSpotController extends BaseController {
                     .orderByAsc(ScenicSpot::getSort)
                     .list();
         }
-        return getDataTable(list);
+        return getDataTable(list, new PageInfo(list).getTotal());
     }
 
     /**

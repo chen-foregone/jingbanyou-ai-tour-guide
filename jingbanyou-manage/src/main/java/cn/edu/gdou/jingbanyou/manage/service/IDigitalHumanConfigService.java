@@ -3,6 +3,8 @@ package cn.edu.gdou.jingbanyou.manage.service;
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+
 /**
  * AI 数字人形象配置 Service 接口
  *
@@ -25,4 +27,12 @@ public interface IDigitalHumanConfigService extends IService<DigitalHumanConfig>
      * @param scenicId 景区ID
      */
     void setDefault(Long id, Long scenicId);
+
+    /**
+     * 查询数字人列表（可选按景区过滤）
+     *
+     * @param scenicId 景区ID（可选，为 null 时返回全部）
+     * @return 数字人列表
+     */
+    List<DigitalHumanConfig> list(Long scenicId);
 }
