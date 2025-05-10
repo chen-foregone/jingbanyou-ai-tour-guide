@@ -1,8 +1,10 @@
 package cn.edu.gdou.jingbanyou.manage.mapper;
 
 import cn.edu.gdou.jingbanyou.manage.dto.EmotionTrendVO;
+import cn.edu.gdou.jingbanyou.manage.dto.FocusPointVO;
 import cn.edu.gdou.jingbanyou.manage.dto.HotQuestionVO;
 import cn.edu.gdou.jingbanyou.manage.dto.OperationOverviewVO;
+import cn.edu.gdou.jingbanyou.manage.dto.SatisfactionTrendVO;
 import cn.edu.gdou.jingbanyou.manage.entity.OperationStats;
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorInteraction;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -74,7 +76,7 @@ public interface VisitorInteractionMapper extends BaseMapper<VisitorInteraction>
      * @param limit 条数
      * @return 关注点列表
      */
-    List<Map<String, Object>> selectIntentDistribution(@Param("scenicId") Long scenicId, @Param("limit") int limit);
+    List<FocusPointVO> selectIntentDistribution(@Param("scenicId") Long scenicId, @Param("limit") int limit);
 
     /**
      * 查询最近N天的满意度趋势
@@ -83,7 +85,7 @@ public interface VisitorInteractionMapper extends BaseMapper<VisitorInteraction>
      * @param days 天数
      * @return 满意度趋势列表
      */
-    List<Map<String, Object>> selectSatisfactionTrend(@Param("scenicId") Long scenicId, @Param("days") int days);
+    List<SatisfactionTrendVO> selectSatisfactionTrend(@Param("scenicId") Long scenicId, @Param("days") int days);
 
     /**
      * 查询指定日期的交互汇总（用于生成日报）

@@ -25,7 +25,7 @@ public interface VisitorConversationMapper extends BaseMapper<VisitorConversatio
      * @param limit 每页条数
      * @return 会话列表
      */
-    List<VisitorConversation> selectConversationList(
+    List<ConversationListVO> selectConversationList(
             @Param("visitorId") String visitorId,
             @Param("scenicId") Long scenicId,
             @Param("offset") int offset,
