@@ -3,6 +3,7 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -36,6 +37,7 @@ public class HybridRetrievalNode implements NodeAction {
     }
 
     @Override
+    @CircuitBreaker(name = "dashscope-llm", fallbackMethod = "applyFallback")
     public Map<String, Object> apply(OverAllState state) throws Exception {
         String question = state.value(QUESTION, String.class).orElse("");
         Long scenicId = state.value(SCENIC_ID, Long.class).orElse(0L);
@@ -87,6 +89,24 @@ public class HybridRetrievalNode implements NodeAction {
             log.info("[混合检索] RETRIEVED_DOCS 长度={}", retrievedDocs.length());
         }
 
-        return state.updateState(Map.of(RETRIEVED_DOCS, retrievedDocs));
+        return state.updateState(Map.of(
+                RETRIEVED_DOCS, retrievedDocs,
+                ROUTE_STATUS, "",
+                GUIDE_MESSAGE, "",
+                ANSWER, ""
+        ));
+    }
+
+    /**
+     * 混合检索熔断降级方法
+     */
+    private Map<String, Object> applyFallback(OverAllState state, Throwable t) {
+        log.warn("[混合检索] 熔断降级: {}", t.getMessage());
+        return state.updateState(Map.of(
+                RETRIEVED_DOCS, "",
+                ROUTE_STATUS, "",
+                GUIDE_MESSAGE, "",
+                ANSWER, ""
+        ));
     }
 }

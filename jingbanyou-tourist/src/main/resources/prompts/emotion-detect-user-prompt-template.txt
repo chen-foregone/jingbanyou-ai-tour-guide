@@ -1,0 +1,4 @@
+分析以下对话中用户的情感倾向，只返回 JSON 格式：
+{"emotion": "positive/neutral/negative", "confidence": 0.0~1.0}
+对话历史：%s
+当前消息：%s

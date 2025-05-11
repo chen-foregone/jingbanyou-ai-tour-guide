@@ -13,6 +13,8 @@ import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.time.Duration;
+
 /**
  * 对话记忆配置（基于 Spring AI Alibaba JedisRedisChatMemoryRepository + Redis Stack）
  *
@@ -43,6 +45,11 @@ public class ChatMemoryConfig {
                 .keyPrefix("chat:memory:")
                 .build();
     }
+
+    /**
+     * 设置 ChatMemory TTL（30分钟）
+     * 通过 Redis EXPIRE 命令在会话结束时主动设置，而非依赖 builder
+     */
 
     /**
      * MessageWindowChatMemory：限制上下文窗口大小（默认保留最近 20 条消息）

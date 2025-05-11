@@ -2,30 +2,27 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
+import cn.edu.gdou.jingbanyou.common.core.redis.RedisCache;
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
 import cn.edu.gdou.jingbanyou.tourist.service.IProfileVectorStoreService;
-import cn.edu.gdou.jingbanyou.tourist.service.impl.ProfileVectorStoreService.SimilarProfile;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 画像加载节点
  *
- * 位置：START → ProfileLoaderNode → (条件路由) → TextDistinguishNode / MultimodalDistinguishNode
- * 逻辑：
- *   1. 从 Redis 读取历史画像，无则初始化空画像
- *   2. 从向量库检索相似历史偏好（如用户说"上次那个有花的地方"）
- *   3. 合并检索结果到画像，写入 OverAllState
- * 不调用 LLM，纯 IO 操作
- *
- * @author jingbanyou
+ * <p>位置：START → ProfileLoaderNode → TextDistinguishNode / MultimodalDistinguishNode
+ * <p>职责：
+ * <p>  1. 优先从 Redis 读取画像（有 TTL 24h 热数据）
+ * <p>  2. Redis 未命中时，从向量库读取并写回 Redis（防止历史丢失）
+ * <p>  3. 均无数据时初始化空画像
+ * <p>不调用 LLM，纯 IO 操作。
  */
 @Slf4j
 @Component
@@ -34,131 +31,128 @@ public class ProfileLoaderNode implements NodeAction {
 
     private static final String REDIS_KEY_PREFIX = "visitor:profile:";
 
-    private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper;
+    private final RedisCache redisCache;
     private final IProfileVectorStoreService profileVectorStoreService;
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
         String visitorId = state.value(VISITOR_ID, String.class).orElse(null);
 
-        VisitorProfile profile;
+        VisitorProfile profile = loadProfile(visitorId);
 
+        log.debug("[画像加载] visitorId={}, 标签={}, 出行类型={}, 已游景点={}, 路线偏好={}, 轮次={}",
+                profile.getVisitorId(), profile.getInterestTags(), profile.getGroupType(),
+                profile.getVisitedSpots(), profile.getPreferRouteType(), profile.getTurnCount());
+
+        return state.updateState(Map.of(
+                VISITOR_PROFILE, profile,
+                START_POINT, profile.getStartPoint() != null ? profile.getStartPoint() : "",
+                END_POINT, profile.getEndPoint() != null ? profile.getEndPoint() : ""
+        ));
+    }
+
+    /**
+     * 加载画像：Redis 优先，向量库兜底
+     *
+     * <p>设计说明：
+     * <p>- Redis 是热存储，TTL 24h，承载会话内高频读写
+     * <p>- 向量库是持久化备份，当 Redis TTL 过期或新设备访问时恢复历史画像
+     */
+    private VisitorProfile loadProfile(String visitorId) {
         if (visitorId == null || visitorId.isBlank()) {
-            log.debug("未提供 visitorId，使用空画像");
-            profile = new VisitorProfile();
-        } else {
-            String json = redisTemplate.opsForValue().get(REDIS_KEY_PREFIX + visitorId);
-            if (json != null) {
-                profile = objectMapper.readValue(json, VisitorProfile.class);
-                log.debug("从 Redis 加载画像成功，visitorId={}, 已有兴趣标签: {}", visitorId, profile.getInterestTags());
-            } else {
-                profile = new VisitorProfile();
-                profile.setVisitorId(visitorId);
-                log.debug("Redis 中无历史画像，初始化空画像，visitorId={}", visitorId);
-            }
-            enrichFromVectorStore(profile);
+            log.debug("[画像加载] 未提供 visitorId，初始化空画像");
+            return new VisitorProfile();
         }
 
-        return state.updateState(Map.of(VISITOR_PROFILE, profile));
+        // 第一步：读 Redis
+        VisitorProfile profile = loadFromRedis(visitorId);
+        if (profile != null) {
+            return profile;
+        }
+
+        // 第二步：Redis 未命中，从向量库恢复
+        profile = loadFromVectorStore(visitorId);
+        if (profile != null) {
+            log.info("[画像加载] Redis 未命中，从向量库恢复画像，visitorId={}", visitorId);
+            saveToRedis(profile);
+            return profile;
+        }
+
+        // 第三步：均无数据，初始化
+        log.debug("[画像加载] 无历史画像，初始化新画像，visitorId={}", visitorId);
+        VisitorProfile newProfile = new VisitorProfile();
+        newProfile.setVisitorId(visitorId);
+        return newProfile;
     }
 
-    /**
-     * 从向量库检索并合并相似偏好（评分 > 0.7 的记录）
-     *
-     * @param profile 当前游客画像
-     */
-    private void enrichFromVectorStore(VisitorProfile profile) {
-        if (profile.getVisitorId() == null || profile.getVisitorId().isBlank()) {
-            return;
-        }
-
+    private VisitorProfile loadFromRedis(String visitorId) {
         try {
-            String query = buildRetrievalQuery(profile);
-            if (query.isBlank()) {
-                return;
+            VisitorProfile profile = redisCache.getCacheObject(REDIS_KEY_PREFIX + visitorId);
+            if (profile != null) {
+                log.debug("[画像加载] Redis 命中，visitorId={}", visitorId);
+                return profile;
             }
-
-            List<SimilarProfile> similarProfiles =
-                    profileVectorStoreService.retrieveSimilarProfiles(profile.getVisitorId(), query);
-
-            if (similarProfiles.isEmpty()) {
-                return;
-            }
-
-            for (SimilarProfile sp : similarProfiles) {
-                if (sp.getScore() > 0.7) {
-                    mergeSimilarProfile(profile, sp);
-                }
-            }
-
-            log.debug("从向量库合并相似偏好完成，visitorId={}, 检索到 {} 条记录",
-                    profile.getVisitorId(), similarProfiles.size());
-
         } catch (Exception e) {
-            log.warn("从向量库检索相似偏好失败，visitorId={}", profile.getVisitorId(), e);
+            log.warn("[画像加载] Redis 读取异常，visitorId={}: {}", visitorId, e.getMessage());
         }
+        return null;
     }
 
-    /**
-     * 构建向量检索查询语句
-     *
-     * @param profile 当前游客画像
-     * @return 查询字符串
-     */
-    private String buildRetrievalQuery(VisitorProfile profile) {
-        StringBuilder query = new StringBuilder();
-
-        if (profile.getPreferRouteType() != null) {
-            query.append(profile.getPreferRouteType()).append("路线 ");
-        }
-
-        if (profile.getInterestTags() != null && !profile.getInterestTags().isEmpty()) {
-            query.append(String.join("、", profile.getInterestTags())).append("景点 ");
-        }
-
-        return query.toString().trim();
-    }
-
-    /**
-     * 将相似偏好合并到当前画像
-     *
-     * @param profile 当前游客画像
-     * @param sp 相似偏好记录
-     */
-    private void mergeSimilarProfile(VisitorProfile profile, SimilarProfile sp) {
-        Map<String, Object> metadata = sp.getMetadata();
-        if (metadata == null) {
-            return;
-        }
-
-        String tags = (String) metadata.get("interestTags");
-        if (tags != null && !tags.isBlank()) {
-            String[] newTags = tags.split(",");
-            Set<String> mergedTags = new LinkedHashSet<>();
-            if (profile.getInterestTags() != null) {
-                mergedTags.addAll(profile.getInterestTags());
+    private VisitorProfile loadFromVectorStore(String visitorId) {
+        try {
+            List<IProfileVectorStoreService.SimilarProfile> results =
+                    profileVectorStoreService.retrieveByVisitorId(visitorId);
+            if (results == null || results.isEmpty()) {
+                return null;
             }
-            Collections.addAll(mergedTags, newTags);
-            profile.setInterestTags(new ArrayList<>(mergedTags));
-        }
 
-        String spots = (String) metadata.get("visitedSpots");
-        if (spots != null && !spots.isBlank()) {
-            String[] newSpots = spots.split(",");
-            Set<String> mergedSpots = new LinkedHashSet<>();
-            if (profile.getVisitedSpots() != null) {
-                mergedSpots.addAll(profile.getVisitedSpots());
+            IProfileVectorStoreService.SimilarProfile sp = results.get(0);
+            Map<String, Object> metadata = sp.getMetadata();
+            if (metadata == null) {
+                return null;
             }
-            Collections.addAll(mergedSpots, newSpots);
-            profile.setVisitedSpots(new ArrayList<>(mergedSpots));
-        }
 
-        if (profile.getPreferRouteType() == null || profile.getPreferRouteType().isBlank()) {
+            VisitorProfile profile = new VisitorProfile();
+            profile.setVisitorId(visitorId);
+
+            String tags = (String) metadata.get("interestTags");
+            if (tags != null && !tags.isBlank()) {
+                List<String> tagList = new ArrayList<>(Arrays.asList(tags.split(",")));
+                tagList.removeIf(String::isBlank);
+                profile.setInterestTags(tagList);
+            }
+
+            String groupType = (String) metadata.get("groupType");
+            if (groupType != null && !groupType.isBlank() && !"null".equals(groupType)) {
+                profile.setGroupType(groupType);
+            }
+
+            String spots = (String) metadata.get("visitedSpots");
+            if (spots != null && !spots.isBlank()) {
+                List<String> spotList = new ArrayList<>(Arrays.asList(spots.split(",")));
+                spotList.removeIf(String::isBlank);
+                profile.setVisitedSpots(spotList);
+            }
+
             String preferRouteType = (String) metadata.get("preferRouteType");
-            if (preferRouteType != null && !preferRouteType.isBlank()) {
+            if (preferRouteType != null && !preferRouteType.isBlank() && !"null".equals(preferRouteType)) {
                 profile.setPreferRouteType(preferRouteType);
             }
+
+            return profile;
+
+        } catch (Exception e) {
+            log.warn("[画像加载] 向量库读取异常，visitorId={}: {}", visitorId, e.getMessage());
+            return null;
+        }
+    }
+
+    private void saveToRedis(VisitorProfile profile) {
+        try {
+            redisCache.setCacheObject(
+                    REDIS_KEY_PREFIX + profile.getVisitorId(), profile, 24 * 60, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.warn("[画像加载] 恢复后写 Redis 失败，visitorId={}", profile.getVisitorId(), e);
         }
     }
 }

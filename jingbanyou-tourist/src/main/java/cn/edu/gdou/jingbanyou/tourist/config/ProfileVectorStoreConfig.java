@@ -25,10 +25,15 @@ public class ProfileVectorStoreConfig {
 
     @Bean
     public VectorStore profileVectorStore(EmbeddingModel embeddingModel) {
-        return RedisVectorStore.builder(new JedisPooled(redisHost, redisPort), embeddingModel)
+        return RedisVectorStore.builder(jedisPooled(), embeddingModel)
                 .indexName("profile-index")
                 .prefix("profile:")
                 .initializeSchema(true)
                 .build();
+    }
+
+    @Bean
+    public JedisPooled jedisPooled() {
+        return new JedisPooled(redisHost, redisPort);
     }
 }

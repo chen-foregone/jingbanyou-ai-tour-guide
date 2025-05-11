@@ -29,10 +29,12 @@ public class GeneralChatFallbackNode implements NodeAction {
         String userText = "游客消息：" + question;
         log.info("[闲聊兜底] RETRIEVED_DOCS={}", userText);
 
-        // 显式清空 ANSWER，防止上轮 Graph 执行的 stale 值泄漏
+        // 显式清空路由/答案状态，防止跨请求泄漏
         return state.updateState(Map.of(
                 RETRIEVED_DOCS, userText,
-                ANSWER, ""
+                ANSWER, "",
+                ROUTE_STATUS, "",
+                GUIDE_MESSAGE, ""
         ));
     }
 }

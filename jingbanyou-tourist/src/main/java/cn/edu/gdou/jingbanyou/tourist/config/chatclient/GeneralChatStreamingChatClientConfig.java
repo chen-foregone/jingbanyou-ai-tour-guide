@@ -3,6 +3,7 @@ package cn.edu.gdou.jingbanyou.tourist.config.chatclient;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,8 +11,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * 闲聊兜底流式 ChatClient 配置
  *
- * <p>与 GeneralChatChatClientConfig 相同，但不注入 ChatMemoryAdvisor。
- * <p>流式调用时 ChatMemory 需要在流结束后手动写入。
+ * <p>注入 MessageChatMemoryAdvisor，流式调用时自动注入对话历史并回写。
  *
  * @author jingbanyou
  */
@@ -24,7 +24,8 @@ public class GeneralChatStreamingChatClientConfig {
     private ModelConfig model;
 
     @Bean("generalChatStreamingChatClient")
-    public ChatClient streamingChatClient(ChatClient.Builder builder) {
+    public ChatClient streamingChatClient(ChatClient.Builder builder,
+                                          MessageChatMemoryAdvisor chatMemoryAdvisor) {
         DashScopeChatOptions options = DashScopeChatOptions.builder()
                 .withModel(model.getName())
                 .withTemperature(model.getTemperature())
@@ -34,6 +35,7 @@ public class GeneralChatStreamingChatClientConfig {
         return builder
                 .defaultSystem(prompt)
                 .defaultOptions(options)
+                .defaultAdvisors(chatMemoryAdvisor)
                 .build();
     }
 

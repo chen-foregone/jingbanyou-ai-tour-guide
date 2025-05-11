@@ -29,4 +29,16 @@ public class VisitorProfile {
 
     /** 当前会话轮次 */
     private int turnCount = 0;
+
+    /**
+     * 历史起点（从对话中提取，跨轮次持久化到 Redis）
+     * 来源：MapRouteApiInvokerNode（调用成功后写入）
+     */
+    private String startPoint;
+
+    /**
+     * 历史终点（从对话中提取，跨轮次持久化到 Redis）
+     * 来源：MapRouteApiInvokerNode（调用成功后写入）
+     */
+    private String endPoint;
 }

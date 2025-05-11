@@ -2,6 +2,7 @@ package cn.edu.gdou.jingbanyou.tourist.service.impl;
 
 import cn.edu.gdou.jingbanyou.tourist.service.ITranscribeService;
 import com.alibaba.cloud.ai.dashscope.audio.transcription.DashScopeAudioTranscriptionOptions;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.alibaba.cloud.ai.dashscope.audio.transcription.AudioTranscriptionModel;
@@ -37,6 +38,7 @@ public class TranscribeService implements ITranscribeService {
      * @param language  语言提示，可为 null（默认中文）
      * @return 识别的文字
      */
+    @CircuitBreaker(name = "dashscope-asr", fallbackMethod = "transcribeFallback")
     public String transcribe(byte[] audioData, String fileName, String language) {
         if (audioData == null || audioData.length == 0) {
             return "";
@@ -73,5 +75,13 @@ public class TranscribeService implements ITranscribeService {
             log.error("ASR 识别失败, 文件名={}", fileName, e);
             return "";
         }
+    }
+
+    /**
+     * ASR 熔断降级方法
+     */
+    private String transcribeFallback(byte[] audioData, String fileName, String language, Throwable t) {
+        log.warn("[ASR] 熔断降级: {}", t.getMessage());
+        return "";
     }
 }

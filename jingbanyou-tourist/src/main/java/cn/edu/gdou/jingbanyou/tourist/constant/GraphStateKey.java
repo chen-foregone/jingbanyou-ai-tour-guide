@@ -190,6 +190,20 @@ public final class GraphStateKey {
      */
     public static final String ROUTE_CACHE_HIT = "routeCacheHit";
 
+    /**
+     * 历史起点（从对话中提取，跨轮次持久化）
+     * 类型：String
+     * 来源：MapRouteApiInvokerNode（调用成功后写入）
+     */
+    public static final String START_POINT = "startPoint";
+
+    /**
+     * 历史终点（从对话中提取，跨轮次持久化）
+     * 类型：String
+     * 来源：MapRouteApiInvokerNode（调用成功后写入）
+     */
+    public static final String END_POINT = "endPoint";
+
     // ==================== 情感分析相关 ====================
 
     /**

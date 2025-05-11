@@ -1,0 +1,50 @@
+# jingbanyou-tourist 模块配置
+
+jingbanyou:
+  tourist:
+  tts:
+    # TTS 音频文件存储路径，支持绝对路径和相对路径
+    # Linux 示例：/data/jingbanyou/tts
+    # Windows 示例：C:/temp/jingbanyou/tts
+    # 不配置时默认使用系统临时目录 java.io.tmpdir/tts
+    audio-dir: /data/jingbanyou/tts
+
+  emotion:
+    # 情感检测 - 正面关键词（逗号分隔，支持正则）
+    positive-words: "谢谢|感谢|很好|不错|满意|喜欢|棒|厉害|专业|帮了大忙|解决了|推荐|点赞|太好了"
+    # 情感检测 - 负面关键词（逗号分隔，支持正则）
+    negative-words: "不行|不好|失望|太差|垃圾|没用|浪费时间|讨厌|不满意|差评|无语|烦|抱怨|投诉"
+
+# OpenTelemetry 链路追踪
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
+# Resilience4j 熔断器配置
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        slow-call-duration-threshold: 10s
+        slow-call-rate-threshold: 80
+        minimum-number-of-calls: 5
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      dashscope-llm:
+        base-config: default
+      dashscope-tts:
+        base-config: default
+      dashscope-asr:
+        base-config: default
+      amap-route:
+        base-config: default
+        slow-call-duration-threshold: 15s

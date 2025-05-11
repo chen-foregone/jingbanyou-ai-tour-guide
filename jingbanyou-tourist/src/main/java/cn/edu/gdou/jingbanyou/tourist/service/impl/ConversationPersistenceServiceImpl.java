@@ -5,12 +5,14 @@ import cn.edu.gdou.jingbanyou.manage.entity.VisitorConversation;
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorInteraction;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorConversationMapper;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper;
-import cn.edu.gdou.jingbanyou.tourist.service.IChatMemoryService;
-import cn.edu.gdou.jingbanyou.tourist.service.IEmotionDetectService;
+import cn.edu.gdou.jingbanyou.tourist.service.IConversationPersistenceService;
 import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -18,57 +20,35 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
- * 对话记忆服务
- *
- * 仅负责对话结束时的 MySQL 持久化（Redis 读写已由 MessageChatMemoryAdvisor 自动处理）
+ * 对话持久化服务实现
+ * 负责对话结束时将 Redis 中的聊天记录和元数据同步到 MySQL
  *
  * @author jingbanyou
- * @deprecated 请使用 {@link ChatMetadataServiceImpl} 和 {@link ConversationPersistenceServiceImpl}
  */
-@Deprecated
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ChatMemoryService implements IChatMemoryService {
+public class ConversationPersistenceServiceImpl implements IConversationPersistenceService {
 
     private final JedisRedisChatMemoryRepository chatMemoryRepository;
     private final VisitorInteractionMapper visitorInteractionMapper;
     private final VisitorConversationMapper visitorConversationMapper;
-    private final IEmotionDetectService emotionDetectService;
-    private final org.springframework.data.redis.core.RedisTemplate<String, Object> chatMetadataRedisTemplate;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final RedisTemplate<String, Object> chatMetadataRedisTemplate;
+    private final ObjectMapper objectMapper;
 
-    /**
-     * 对话结束时，异步全量同步到 MySQL
-     * 调用时机：前端页面离开时调用 /tourist/chat/end
-     *
-     * @param sessionId        会话ID
-     * @param scenicId         景区ID
-     * @param visitorId        游客ID
-     * @param interactionType   交互类型（如 text、voice）
-     */
-    @Override
-    @Async
-    public void syncToMySQL(String sessionId, Long scenicId, String visitorId, String interactionType) {
-        syncToMySQL(sessionId, scenicId, null, visitorId, interactionType, null, null, null, null, null);
-    }
-
-    /**
-     * 对话结束时，同步到 MySQL 并携带完整元数据
-     * 调用时机：前端页面离开时调用 /tourist/chat/end
-     */
     @Override
     @Async
     public void syncToMySQL(String sessionId, Long scenicId, Long humanId, String visitorId,
-                           String interactionType, String intentType,
-                           Integer responseTimeMs, Integer tokensUsed, String modelUsed,
-                           String ragDocs) {
+                            String interactionType, String intentType,
+                            Integer responseTimeMs, Integer tokensUsed, String modelUsed,
+                            String ragDocs) {
         try {
             List<Message> msgs = loadMessages(sessionId);
-            if (msgs == null || msgs.isEmpty()) return;
+            if (msgs == null || msgs.isEmpty()) {
+                return;
+            }
 
             int turnCount = persistInteractions(msgs, sessionId, scenicId, humanId, visitorId,
                     interactionType, intentType, responseTimeMs, tokensUsed, modelUsed, ragDocs);
@@ -91,9 +71,31 @@ public class ChatMemoryService implements IChatMemoryService {
 
             clearRedisData(sessionId);
 
-            log.info("[同步] 对话已同步到 MySQL，sessionId={}，turnCount={}，emotion={}", sessionId, turnCount, emotion);
+            log.info("[同步] 对话已同步到 MySQL，sessionId={}，turnCount={}，emotion={}",
+                    sessionId, turnCount, emotion);
         } catch (Exception e) {
             log.error("[同步] 同步对话到 MySQL 失败，sessionId={}", sessionId, e);
+        }
+    }
+
+    @Override
+    public void updateLastInteractionEmotion(String sessionId, String emotionDetected,
+                                              Double emotionConfidence) {
+        try {
+            VisitorInteraction interaction = visitorInteractionMapper
+                    .selectList(new LambdaQueryWrapper<VisitorInteraction>()
+                            .eq(VisitorInteraction::getSessionId, sessionId)
+                            .orderByDesc(VisitorInteraction::getId)
+                            .last("LIMIT 1"))
+                    .stream().findFirst().orElse(null);
+            if (interaction != null) {
+                interaction.setEmotionDetected(emotionDetected);
+                interaction.setEmotionConfidence(emotionConfidence);
+                visitorInteractionMapper.updateById(interaction);
+                log.info("已更新交互情感，sessionId={}, emotion={}", sessionId, emotionDetected);
+            }
+        } catch (Exception e) {
+            log.error("更新交互情感失败，sessionId={}", sessionId, e);
         }
     }
 
@@ -128,8 +130,8 @@ public class ChatMemoryService implements IChatMemoryService {
                 record.setResponseTimeMs(responseTimeMs);
                 record.setTokensUsed(tokensUsed);
                 record.setModelUsed(modelUsed);
-                record.setRagDocs(ragDocs);
                 record.setTurnIndex(turnCount);
+                record.setRagDocs(toJson(ragDocs));
                 visitorInteractionMapper.insert(record);
                 turnCount++;
             }
@@ -165,7 +167,7 @@ public class ChatMemoryService implements IChatMemoryService {
     /**
      * 从 Redis 加载情感检测结果
      *
-     * @return Map 包含 emotion(String) 和 confidence(Double)，无数据时值均为 null
+     * @return Map 包含 emotion(String) 和 confidence(Double)
      */
     private Map<String, Object> loadEmotionData(String sessionId) {
         Map<String, Object> result = new HashMap<>();
@@ -254,80 +256,31 @@ public class ChatMemoryService implements IChatMemoryService {
      * 截断字符串到指定长度
      */
     private String truncate(String text, int maxLength) {
-        if (text == null) return null;
+        if (text == null) {
+            return null;
+        }
         return text.length() > maxLength ? text.substring(0, maxLength) : text;
     }
 
     /**
-     * 记录单轮对话（不含会话结束标志）
-     * 不再直接写入 MySQL，仅传递上下文信息，由 syncToMySQL 在 endChat 时统一持久化
+     * 将 ragDocs 转为合法 JSON 字符串。
+     * MySQL rag_docs 列类型为 JSON，不接受纯文本字符串。
      */
-    @Override
-    @Async
-    public void recordSingleTurn(String sessionId, Long scenicId, Long humanId, String visitorId,
-                                  String userQuestion, String aiAnswer,
-                                  String interactionType, String intentType,
-                                  Integer responseTimeMs, Integer tokensUsed, String modelUsed) {
-        log.debug("recordSingleTurn 调用（不再写入 MySQL），sessionId={}, intent={}", sessionId, intentType);
-    }
-
-    @Override
-    public void updateLastInteractionEmotion(String sessionId, String emotionDetected, Double emotionConfidence) {
+    private String toJson(String ragDocs) {
+        if (ragDocs == null || ragDocs.isBlank()) {
+            return "{}";
+        }
         try {
-            VisitorInteraction interaction = visitorInteractionMapper
-                    .selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<VisitorInteraction>()
-                            .eq(VisitorInteraction::getSessionId, sessionId)
-                            .orderByDesc(VisitorInteraction::getId)
-                            .last("LIMIT 1"))
-                    .stream().findFirst().orElse(null);
-            if (interaction != null) {
-                interaction.setEmotionDetected(emotionDetected);
-                interaction.setEmotionConfidence(emotionConfidence);
-                visitorInteractionMapper.updateById(interaction);
-                log.info("已更新交互情感，sessionId={}, emotion={}", sessionId, emotionDetected);
+            // 尝试直接解析，如果已经是合法 JSON 就原样返回
+            objectMapper.readTree(ragDocs);
+            return ragDocs;
+        } catch (Exception e) {
+            // 不是合法 JSON，包装为 {"content": "..."}
+            try {
+                return objectMapper.writeValueAsString(Map.of("content", ragDocs));
+            } catch (Exception ex) {
+                return "{}";
             }
-        } catch (Exception e) {
-            log.error("更新交互情感失败，sessionId={}", sessionId, e);
-        }
-    }
-
-    @Override
-    public void saveChatMetadata(String sessionId, String intent, Integer tokensUsed,
-                                  String modelUsed, int responseTimeMs, String ragDocs) {
-        try {
-            Map<String, Object> meta = new HashMap<>();
-            meta.put("intent", intent);
-            meta.put("tokensUsed", tokensUsed);
-            meta.put("modelUsed", modelUsed);
-            meta.put("responseTimeMs", responseTimeMs);
-            meta.put("ragDocs", ragDocs);
-            String json = objectMapper.writeValueAsString(meta);
-            chatMetadataRedisTemplate.opsForValue().set("chat:meta:" + sessionId, json, 1, TimeUnit.HOURS);
-        } catch (Exception e) {
-            log.error("保存对话元数据失败 sessionId={}", sessionId, e);
-        }
-    }
-
-    @Override
-    public Map<String, Object> getChatMetadata(String sessionId) {
-        try {
-            Object raw = chatMetadataRedisTemplate.opsForValue().get("chat:meta:" + sessionId);
-            if (raw == null) return null;
-            if (raw instanceof String) {
-                return objectMapper.readValue((String) raw, Map.class);
-            }
-        } catch (Exception e) {
-            log.debug("获取对话元数据失败 sessionId={}", sessionId, e);
-        }
-        return null;
-    }
-
-    @Override
-    public void deleteChatMetadata(String sessionId) {
-        try {
-            chatMetadataRedisTemplate.delete("chat:meta:" + sessionId);
-        } catch (Exception e) {
-            log.debug("删除对话元数据失败 sessionId={}", sessionId, e);
         }
     }
 }

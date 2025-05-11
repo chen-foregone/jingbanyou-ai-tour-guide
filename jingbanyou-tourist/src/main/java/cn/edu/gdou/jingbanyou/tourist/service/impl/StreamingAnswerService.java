@@ -1,19 +1,21 @@
 package cn.edu.gdou.jingbanyou.tourist.service.impl;
 
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
+import cn.edu.gdou.jingbanyou.tourist.dto.StreamAnswerContext;
 import cn.edu.gdou.jingbanyou.tourist.graph.StreamGraphConfiguration;
-import cn.edu.gdou.jingbanyou.tourist.service.IChatMemoryService;
 import cn.edu.gdou.jingbanyou.tourist.service.IStreamingAnswerService;
 import cn.edu.gdou.jingbanyou.tourist.service.ITtsService;
+import cn.edu.gdou.jingbanyou.tourist.service.sse.SseEventFactory;
 import cn.hutool.extra.emoji.EmojiUtil;
-import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
@@ -21,8 +23,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
-import java.util.Base64;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -33,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>直接通过 ChatClient.stream() 获取真实 token 流</li>
  *   <li>累积 token 到段落缓冲区</li>
  *   <li>段落结束时：推送 answer_fragment SSE + 触发 TTS</li>
- *   <li>流结束后写入 Redis ChatMemory</li>
+ *   <li>ChatMemory 由 MessageChatMemoryAdvisor 自动管理</li>
  * </ol>
  *
  * @author jingbanyou
@@ -53,34 +55,23 @@ public class StreamingAnswerService implements IStreamingAnswerService {
     private final ChatClient generalChatStreamingChatClient;
 
     private final ITtsService ttsService;
-    private final IChatMemoryService chatMemoryService;
-    private final JedisRedisChatMemoryRepository chatMemoryRepository;
+    private final ObjectMapper objectMapper;
+    private final SseEventFactory sseEventFactory;
 
     @Override
-    public Flux<ServerSentEvent<String>> streamAnswer(
-            String sessionId,
-            Long scenicId,
-            Long humanId,
-            String visitorId,
-            String intent,
-            String userMessage,
-            String retrievedDocs,
-            DigitalHumanConfig digitalHuman,
-            List<?> rawRoutes,
-            String intentType,
-            int graphCostMs,
-            long startTimestamp) {
-
+    public Flux<ServerSentEvent<String>> streamAnswer(StreamAnswerContext ctx) {
+        String intent = ctx.intent();
+        String sessionId = ctx.sessionId();
         log.info("[流式] 开始, intent={}, sessionId={}", intent, sessionId);
 
         // route_plan: 从 Graph state 的 POLISHED_ROUTES 生成叙述文本流
         if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
-            String narrative = buildRouteNarrative(rawRoutes);
-            return streamTextWithParagraphs(narrative, digitalHuman, sessionId, scenicId,
-                    humanId, visitorId, userMessage, intentType, graphCostMs, startTimestamp);
+            String narrative = buildRouteNarrative(ctx.rawRoutes());
+            return streamTextWithParagraphs(narrative, ctx);
         }
 
         // spot_question / complex_other: 直接通过 ChatClient.stream() 获取真实 token 流
+        String retrievedDocs = ctx.retrievedDocs();
         Flux<String> tokenFlux;
         if (retrievedDocs == null || retrievedDocs.isBlank()) {
             tokenFlux = Flux.just("这个问题我暂时还不太清楚，建议您咨询景区工作人员。");
@@ -89,14 +80,26 @@ public class StreamingAnswerService implements IStreamingAnswerService {
                     ? hybridRetrievalStreamingChatClient
                     : generalChatStreamingChatClient;
 
-            tokenFlux = streamingChatClient.prompt()
-                    .user(retrievedDocs)
-                    .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
+            // 用 Prompt 显式构造消息：
+            // - UserText：原始用户问题（被 ChatMemory 存储，供历史查看）
+            // - SystemText：RAG 检索上下文（不被 ChatMemory 存储，仅作为 LLM 上下文）
+            List<Message> promptMessages = new ArrayList<>();
+            promptMessages.add(new UserMessage(ctx.originalQuestion()));
+            if (retrievedDocs != null && !retrievedDocs.isBlank()
+                    && !retrievedDocs.startsWith("游客消息：")) {
+                // spot_question：检索到知识文档，注入 RAG 上下文
+                promptMessages.add(new SystemMessage("参考资料：\n" + retrievedDocs));
+            }
+
+            Prompt ragPrompt = new Prompt(promptMessages);
+            tokenFlux = streamingChatClient.prompt(ragPrompt)
+                    .advisors(c -> c.param(ChatMemory.CONVERSATION_ID, sessionId))
                     .stream()
                     .content();
         }
 
         AtomicInteger seq = new AtomicInteger(0);
+        AtomicBoolean firstParagraphSent = new AtomicBoolean(false);
         StringBuilder buffer = new StringBuilder();
         StringBuilder fullAnswer = new StringBuilder();
         Sinks.Many<String> paragraphSink = Sinks.many().multicast().onBackpressureBuffer(16);
@@ -130,21 +133,21 @@ public class StreamingAnswerService implements IStreamingAnswerService {
 
         // 文本流：段落到达时立即发送 answer_fragment SSE，TTS 后台发射到 audioSink
         Flux<ServerSentEvent<String>> textFlux = paragraphSink.asFlux()
+                .doOnNext(paragraph -> {
+                    if (firstParagraphSent.compareAndSet(false, true)) {
+                        long firstParagraphMs = System.currentTimeMillis() - ctx.startTimestamp();
+                        log.info("[流式] 首段落到达, intent={}, sessionId={}, graphCostMs={}, firstParagraphMs={}, 总耗时={}ms",
+                                intent, sessionId, ctx.graphCostMs(), firstParagraphMs, firstParagraphMs);
+                    }
+                })
                 .flatMapSequential(paragraph -> fireTextAndTriggerTts(
-                        paragraph, digitalHuman, seq, startTimestamp, audioSink))
+                        paragraph, ctx.digitalHuman(), seq, ctx.startTimestamp(), audioSink))
                 .doOnComplete(() -> audioSink.tryEmitComplete());
 
         // 合并文本和音频：两边独立发射，互不阻塞
         return Flux.merge(textFlux, audioSink.asFlux())
-                .doOnComplete(() -> {
-                    writeChatMemory(sessionId, userMessage, fullAnswer.toString());
-                    int totalMs = (int) (System.currentTimeMillis() - startTimestamp);
-                    chatMemoryService.recordSingleTurn(sessionId, scenicId, humanId, visitorId,
-                            userMessage, fullAnswer.toString(), "text",
-                            intentType, totalMs, null, null);
-                })
-                .doOnError(e -> log.error("[流式] LLM 流异常", e))
-                .doOnCancel(() -> writeChatMemory(sessionId, userMessage, fullAnswer.toString()));
+                .doOnComplete(() -> log.info("[流式] 答案流完成，sessionId={}", sessionId))
+                .doOnError(e -> log.error("[流式] LLM 流异常", e));
     }
 
     /**
@@ -167,11 +170,12 @@ public class StreamingAnswerService implements IStreamingAnswerService {
             AtomicInteger seq,
             long startTimestamp,
             Sinks.Many<ServerSentEvent<String>> audioSink) {
-        String clean = paragraph.trim();
-        if (clean.isEmpty()) return Mono.empty();
+        // 解析 JSON，提取 answer 字段（hybrid-retrieval prompt 输出 JSON 格式）
+        String cleanText = extractAnswerFromJson(paragraph.trim());
+        if (cleanText.isEmpty()) return Mono.empty();
 
         // 准备 TTS 文本（去 emoji + 截断）
-        String ttsText = EmojiUtil.removeAllEmojis(clean);
+        String ttsText = EmojiUtil.removeAllEmojis(cleanText);
         if (ttsText.length() > 500) {
             ttsText = ttsText.substring(0, 500);
         }
@@ -179,50 +183,56 @@ public class StreamingAnswerService implements IStreamingAnswerService {
         // Fire-and-forget: 在独立订阅中执行 TTS，不等待结果
         if (!ttsText.isBlank()) {
             ttsService.streamAudio(ttsText, digitalHuman)
-                    .map(chunk -> audioSse(chunk, seq.incrementAndGet(), startTimestamp))
+                    .map(chunk -> sseEventFactory.audio(chunk, seq.incrementAndGet(), startTimestamp))
                     .subscribe(
                             audioSink::tryEmitNext,
-                            error -> log.warn("[流式] TTS 段落失败，跳过: {}", error.getMessage())
+                            error -> log.error("[流式] TTS 段落失败，跳过: {}", error.getMessage())
                     );
         }
 
         // 立即返回文本 SSE，不等待 TTS
-        return Mono.just(answerFragmentSse(clean));
+        return Mono.just(sseEventFactory.answerFragment(cleanText));
+    }
+
+    /**
+     * 从 JSON 字符串中提取 answer 字段
+     * <p>当 LLM 输出 JSON 格式时（如 hybrid-retrieval），只取 answer 字段的值，
+     * 过滤掉 confidence、reason 等内部元数据
+     */
+    private String extractAnswerFromJson(String text) {
+        if (text.isEmpty() || !text.contains("\"answer\":")) {
+            return text;
+        }
+        try {
+            Map<?, ?> json = objectMapper.readValue(text, Map.class);
+            Object answer = json.get("answer");
+            if (answer != null) {
+                return answer.toString();
+            }
+        } catch (Exception e) {
+            log.debug("[流式] JSON 解析失败，使用原始文本: {}", e.getMessage());
+        }
+        return text;
     }
 
     /**
      * 纯文本流（route_plan 路线叙述）
      */
     private Flux<ServerSentEvent<String>> streamTextWithParagraphs(
-            String text,
-            DigitalHumanConfig digitalHuman,
-            String sessionId,
-            Long scenicId,
-            Long humanId,
-            String visitorId,
-            String userMessage,
-            String intentType,
-            int graphCostMs,
-            long startTimestamp) {
+            String text, StreamAnswerContext ctx) {
 
         List<String> paragraphs = splitIntoParagraphs(text);
         AtomicInteger seq = new AtomicInteger(0);
-        String fullAnswer = text;
 
         Sinks.Many<ServerSentEvent<String>> audioSink = Sinks.many().multicast().onBackpressureBuffer(128);
 
         Flux<ServerSentEvent<String>> textFlux = Flux.fromIterable(paragraphs)
-                .flatMapSequential(p -> fireTextAndTriggerTts(p, digitalHuman, seq, startTimestamp, audioSink))
+                .flatMapSequential(p -> fireTextAndTriggerTts(
+                        p, ctx.digitalHuman(), seq, ctx.startTimestamp(), audioSink))
                 .doOnComplete(() -> audioSink.tryEmitComplete());
 
         return Flux.merge(textFlux, audioSink.asFlux())
-                .doOnComplete(() -> {
-                    writeChatMemory(sessionId, userMessage, fullAnswer);
-                    int totalMs = (int) (System.currentTimeMillis() - startTimestamp);
-                    chatMemoryService.recordSingleTurn(sessionId, scenicId, humanId, visitorId,
-                            userMessage, fullAnswer, "text",
-                            intentType, totalMs, null, null);
-                })
+                .doOnComplete(() -> log.info("[流式] 文本流完成，sessionId={}", ctx.sessionId()))
                 .doOnError(e -> log.error("[流式] 文本流异常", e));
     }
 
@@ -284,62 +294,4 @@ public class StreamingAnswerService implements IStreamingAnswerService {
         return sb.toString();
     }
 
-    /**
-     * 流结束后写入 Redis ChatMemory
-     */
-    private void writeChatMemory(String sessionId, String userMessage, String aiAnswer) {
-        try {
-            List<Message> existing = chatMemoryRepository.findByConversationId(sessionId);
-            if (existing == null) {
-                existing = new ArrayList<>();
-            }
-            existing.add(new UserMessage(userMessage));
-            existing.add(new AssistantMessage(aiAnswer != null ? aiAnswer : ""));
-            chatMemoryRepository.saveAll(sessionId, existing);
-            log.info("[流式] ChatMemory 已写入, sessionId={}", sessionId);
-        } catch (Exception e) {
-            log.warn("[流式] ChatMemory 写入失败, sessionId={}: {}", sessionId, e.getMessage());
-        }
-    }
-
-    // ========== SSE 事件构建方法 ==========
-
-    private ServerSentEvent<String> answerFragmentSse(String content) {
-        String data = "{\"content\":\"" + escapeJson(content) + "\"}";
-        return ServerSentEvent.<String>builder()
-                .id(String.valueOf(System.currentTimeMillis()))
-                .event("answer_fragment")
-                .data(data)
-                .build();
-    }
-
-    private ServerSentEvent<String> audioSse(byte[] chunk, int seq, long startTimestamp) {
-        String base64 = Base64.getEncoder().encodeToString(chunk);
-        long audioCost = System.currentTimeMillis() - startTimestamp;
-        long serverTime = System.currentTimeMillis();
-        String data = "{\"seq\":" + seq + ",\"chunk\":\"" + base64 + "\",\"audioCostMs\":" + audioCost + ",\"serverTime\":" + serverTime + "}";
-        return ServerSentEvent.<String>builder()
-                .id(String.valueOf(serverTime))
-                .event("audio")
-                .data(data)
-                .build();
-    }
-
-    private ServerSentEvent<String> errorSse(String message) {
-        String data = "{\"content\":\"\",\"error\":\"" + escapeJson(message) + "\",\"timestamp\":" + System.currentTimeMillis() + "}";
-        return ServerSentEvent.<String>builder()
-                .id(String.valueOf(System.currentTimeMillis()))
-                .event("error")
-                .data(data)
-                .build();
-    }
-
-    private String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-    }
 }

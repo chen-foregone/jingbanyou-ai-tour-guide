@@ -6,7 +6,9 @@ import java.util.Map;
  * 对话记忆服务接口
  *
  * @author jingbanyou
+ * @deprecated 请使用 {@link IChatMetadataService} 和 {@link IConversationPersistenceService}
  */
+@Deprecated
 public interface IChatMemoryService {
 
     /**
@@ -27,7 +29,7 @@ public interface IChatMemoryService {
      * @param visitorId 游客ID
      */
     default void syncToMySQL(String sessionId, Long scenicId, String visitorId) {
-        syncToMySQL(sessionId, scenicId, visitorId, "text", null, null, null, null);
+        syncToMySQL(sessionId, scenicId, null, visitorId, "text", null, null, null, null, null);
     }
 
     /**
@@ -35,20 +37,24 @@ public interface IChatMemoryService {
      *
      * @param sessionId       会话ID
      * @param scenicId        景区ID
+     * @param humanId         数字人ID
      * @param visitorId       游客ID
      * @param interactionType 交互类型（text/voice）
      * @param intentType      意图类型
      * @param responseTimeMs  响应耗时（毫秒）
      * @param tokensUsed      消耗 Token 数量
      * @param modelUsed       使用的 AI 模型
+     * @param ragDocs         引用的知识文档（JSON 数组字符串）
      */
-    void syncToMySQL(String sessionId, Long scenicId, String visitorId,
+    void syncToMySQL(String sessionId, Long scenicId, Long humanId, String visitorId,
                      String interactionType, String intentType,
-                     Integer responseTimeMs, Integer tokensUsed, String modelUsed);
+                     Integer responseTimeMs, Integer tokensUsed, String modelUsed,
+                     String ragDocs);
 
     /**
      * 记录单轮对话（不含会话结束标志）
-     * 在 chat()/chatStream() 成功后调用，写入当前这一轮交互
+     * 在 chat()/chatStream() 成功后调用，传递上下文信息供 endChat 时统一写入 MySQL
+     * 注意：此方法不再直接写入 MySQL，改为通过 Redis 携带信息，由 syncToMySQL 统一持久化
      *
      * @param sessionId       会话ID
      * @param scenicId        景区ID
@@ -79,14 +85,15 @@ public interface IChatMemoryService {
     /**
      * 保存对话元数据到 Redis
      *
-     * @param sessionId     会话ID
-     * @param intent        意图类型
-     * @param tokensUsed    消耗 Token 数量
-     * @param modelUsed     使用的 AI 模型
-     * @param responseTimeMs 响应耗时（毫秒）
+     * @param sessionId       会话ID
+     * @param intent          意图类型
+     * @param tokensUsed      消耗 Token 数量
+     * @param modelUsed       使用的 AI 模型
+     * @param responseTimeMs  响应耗时（毫秒）
+     * @param ragDocs         引用的知识文档（JSON 数组字符串）
      */
     void saveChatMetadata(String sessionId, String intent, Integer tokensUsed,
-                          String modelUsed, int responseTimeMs);
+                          String modelUsed, int responseTimeMs, String ragDocs);
 
     /**
      * 从 Redis 获取对话元数据

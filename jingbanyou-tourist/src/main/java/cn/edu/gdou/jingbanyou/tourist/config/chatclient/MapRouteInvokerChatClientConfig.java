@@ -18,7 +18,6 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "jingbanyou.ai.map-route-invoker")
 public class MapRouteInvokerChatClientConfig {
 
-    private String prompt;
     private ModelConfig model;
 
     @Bean("mapRouteInvokerChatClient")
@@ -33,7 +32,6 @@ public class MapRouteInvokerChatClientConfig {
                 .build();
 
         return builder
-                .defaultSystem(prompt)
                 .defaultAdvisors(chatMemoryAdvisor)
                 .defaultToolCallbacks(toolCallbackProvider)
                 .defaultOptions(options)

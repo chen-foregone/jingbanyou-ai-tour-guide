@@ -36,8 +36,7 @@ public class VisitorConversationServiceImpl implements IVisitorConversationServi
     @Override
     public List<ConversationListVO> getConversationList(String visitorId, Long scenicId, int page, int size) {
         int offset = (page - 1) * size;
-        List<VisitorConversation> conversations = conversationMapper.selectConversationList(visitorId, scenicId, offset, size);
-        return conversations.stream().map(this::toConversationListVO).toList();
+        return conversationMapper.selectConversationList(visitorId, scenicId, offset, size);
     }
 
     private ConversationListVO toConversationListVO(VisitorConversation vc) {
