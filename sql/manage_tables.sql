@@ -384,3 +384,8 @@ INSERT INTO `manage_config` (`config_key`, `config_value`, `config_type`, `confi
 ('ui.language', 'zh-CN', 'text', 'ui', '界面语言'),
 ('business.response_timeout', '5000', 'number', 'business', '响应超时时间 (ms)'),
 ('security.session_timeout', '1800', 'number', 'security', '会话超时时间 (秒)');
+
+-- ====================== 迁移脚本 ======================
+-- 【2026-05-03】visitor_conversation.scenic_id 改为 NOT NULL（会话必有景区）
+-- 注意：如果表中已有 scenic_id 为 NULL 的历史数据，请先处理后再执行此迁移
+ALTER TABLE `manage_visitor_conversation` MODIFY COLUMN `scenic_id` BIGINT NOT NULL COMMENT '景区ID';
