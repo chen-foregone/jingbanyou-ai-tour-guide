@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>cn.edu.gdou.jingbanyou</groupId>
-        <artifactId>jingbanyou-parent</artifactId>
-        <version>1.0.0</version>
+        <groupId>cn.edu.gdou</groupId>
+        <artifactId>jingbanyou</artifactId>
+        <version>3.9.2</version>
     </parent>
 
     <artifactId>jingbanyou-tourist</artifactId>
@@ -24,16 +24,16 @@
     <dependencies>
         <!-- AI 核心能力 -->
         <dependency>
-            <groupId>cn.edu.gdou.jingbanyou</groupId>
+            <groupId>cn.edu.gdou</groupId>
             <artifactId>jingbanyou-ai</artifactId>
-            <version>${project.version}</version>
+            <version>${project.parent.version}</version>
         </dependency>
 
         <!-- 管理后台 Entity -->
         <dependency>
-            <groupId>cn.edu.gdou.jingbanyou</groupId>
+            <groupId>cn.edu.gdou</groupId>
             <artifactId>jingbanyou-manage</artifactId>
-            <version>${project.version}</version>
+            <version>${project.parent.version}</version>
         </dependency>
 
         <!-- Spring Boot Web -->
