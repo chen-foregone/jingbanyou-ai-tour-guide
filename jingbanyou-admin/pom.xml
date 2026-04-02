@@ -3,13 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>jingbanyou-ai-tour-guide</artifactId>
+        <artifactId>jingbanyou</artifactId>
         <groupId>cn.edu.gdou</groupId>
         <version>3.9.2</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
-    <artifactId>jingbanyou-ai-tour-guide-admin</artifactId>
+    <artifactId>jingbanyou-admin</artifactId>
 
     <description>
         web服务入口
@@ -39,19 +39,19 @@
         <!-- 核心模块-->
         <dependency>
             <groupId>cn.edu.gdou</groupId>
-            <artifactId>jingbanyou-ai-tour-guide-framework</artifactId>
+            <artifactId>jingbanyou-framework</artifactId>
         </dependency>
 
         <!-- 定时任务-->
         <dependency>
             <groupId>cn.edu.gdou</groupId>
-            <artifactId>jingbanyou-ai-tour-guide-quartz</artifactId>
+            <artifactId>jingbanyou-quartz</artifactId>
         </dependency>
 
         <!-- 代码生成-->
         <dependency>
             <groupId>cn.edu.gdou</groupId>
-            <artifactId>jingbanyou-ai-tour-guide-generator</artifactId>
+            <artifactId>jingbanyou-generator</artifactId>
         </dependency>
 
     </dependencies>

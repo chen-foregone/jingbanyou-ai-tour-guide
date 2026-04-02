@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	
     <groupId>cn.edu.gdou</groupId>
-    <artifactId>jingbanyou-ai-tour-guide</artifactId>
+	<artifactId>jingbanyou</artifactId>
     <version>3.9.2</version>
 
     <name>jingbanyou</name>
@@ -13,7 +13,7 @@
     <description>景伴游·AI数字人导览系统</description>
     
     <properties>
-        <jingbanyou-ai-tour-guide.version>3.9.2</jingbanyou-ai-tour-guide.version>
+        <jingbanyou.version>3.9.2</jingbanyou.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>17</java.version>
@@ -138,36 +138,36 @@
             <!-- 定时任务-->
             <dependency>
                 <groupId>cn.edu.gdou</groupId>
-                <artifactId>jingbanyou-ai-tour-guide-quartz</artifactId>
-                <version>${jingbanyou-ai-tour-guide.version}</version>
+                <artifactId>jingbanyou-quartz</artifactId>
+                <version>${jingbanyou.version}</version>
             </dependency>
 
             <!-- 代码生成-->
             <dependency>
                 <groupId>cn.edu.gdou</groupId>
-                <artifactId>jingbanyou-ai-tour-guide-generator</artifactId>
-                <version>${jingbanyou-ai-tour-guide.version}</version>
+                <artifactId>jingbanyou-generator</artifactId>
+                <version>${jingbanyou.version}</version>
             </dependency>
 
             <!-- 核心模块-->
             <dependency>
                 <groupId>cn.edu.gdou</groupId>
-                <artifactId>jingbanyou-ai-tour-guide-framework</artifactId>
-                <version>${jingbanyou-ai-tour-guide.version}</version>
+                <artifactId>jingbanyou-framework</artifactId>
+                <version>${jingbanyou.version}</version>
             </dependency>
 
             <!-- 系统模块-->
             <dependency>
                 <groupId>cn.edu.gdou</groupId>
-                <artifactId>jingbanyou-ai-tour-guide-system</artifactId>
-                <version>${jingbanyou-ai-tour-guide.version}</version>
+                <artifactId>jingbanyou-system</artifactId>
+                <version>${jingbanyou.version}</version>
             </dependency>
 
             <!-- 通用工具-->
             <dependency>
                 <groupId>cn.edu.gdou</groupId>
-                <artifactId>jingbanyou-ai-tour-guide-common</artifactId>
-                <version>${jingbanyou-ai-tour-guide.version}</version>
+                <artifactId>jingbanyou-common</artifactId>
+                <version>${jingbanyou.version}</version>
             </dependency>
 
         </dependencies>
@@ -180,6 +180,7 @@
         <module>jingbanyou-quartz</module>
         <module>jingbanyou-generator</module>
         <module>jingbanyou-common</module>
+        <module>jingbanyou-manage</module>
     </modules>
     <packaging>pom</packaging>
 
