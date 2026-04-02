@@ -19,6 +19,7 @@
         <java.version>17</java.version>
         <spring-boot.version>3.4.3</spring-boot.version>
         <mybatis-spring-boot.version>4.0.1</mybatis-spring-boot.version>
+        <mybatis-plus.version>3.5.9</mybatis-plus.version>
         <druid.version>1.2.28</druid.version>
         <yauaa.version>8.1.0</yauaa.version>
         <kaptcha.version>2.3.3</kaptcha.version>
@@ -147,6 +148,27 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-pool2</artifactId>
                 <version>2.12.1</version>
+            </dependency>
+
+            <!-- MyBatis-Plus -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <!-- Spring AOP 支持 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-aop</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+
+            <!-- JSpecify 注解 -->
+            <dependency>
+                <groupId>org.jspecify</groupId>
+                <artifactId>jspecify</artifactId>
+                <version>1.0.0</version>
             </dependency>
 
             <!-- annotations 注解 -->
