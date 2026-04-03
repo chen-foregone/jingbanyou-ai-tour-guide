@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 常见问答管理 Controller（赛题要求：保障问答准确率 90%）
+ * 常见问答管理 Controller
  *
  * @author jingbanyou
  */

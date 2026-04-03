@@ -15,7 +15,7 @@ import java.time.LocalDate;
 import java.util.Map;
 
 /**
- * 游客感受度分析 Controller（赛题要求核心功能）
+ * 游客感受度分析 Controller
  *
  * @author jingbanyou
  */

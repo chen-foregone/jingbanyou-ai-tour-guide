@@ -60,13 +60,7 @@
             <artifactId>jingbanyou-manage</artifactId>
         </dependency>
 
-        <!-- AI 数字人核心模块-->
-        <dependency>
-            <groupId>cn.edu.gdou</groupId>
-            <artifactId>jingbanyou-ai</artifactId>
-        </dependency>
-
-        <!-- 游客交互端模块-->
+        <!-- 游客交互端模块（含AI数字人核心能力）-->
         <dependency>
             <groupId>cn.edu.gdou</groupId>
             <artifactId>jingbanyou-tourist</artifactId>

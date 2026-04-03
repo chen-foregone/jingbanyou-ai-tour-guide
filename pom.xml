@@ -207,13 +207,6 @@
                 <version>${jingbanyou.version}</version>
             </dependency>
 
-            <!-- AI 模块-->
-            <dependency>
-                <groupId>cn.edu.gdou</groupId>
-                <artifactId>jingbanyou-ai</artifactId>
-                <version>${jingbanyou.version}</version>
-            </dependency>
-
             <!-- 游客交互端模块-->
             <dependency>
                 <groupId>cn.edu.gdou</groupId>
@@ -246,7 +239,6 @@
         <module>jingbanyou-generator</module>
         <module>jingbanyou-common</module>
         <module>jingbanyou-manage</module>
-        <module>jingbanyou-ai</module>
         <module>jingbanyou-tourist</module>
     </modules>
     <packaging>pom</packaging>

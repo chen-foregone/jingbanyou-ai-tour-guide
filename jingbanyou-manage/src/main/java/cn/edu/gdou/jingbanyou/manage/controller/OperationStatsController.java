@@ -25,7 +25,7 @@ public class OperationStatsController extends BaseController
     private IOperationStatsService statsService;
 
     /**
-     * 今日实时概览（数据大屏核心指标）
+     * 今日实时概览
      */
     @GetMapping("/today-overview")
     public AjaxResult getTodayOverview(@RequestParam Long scenicId)
