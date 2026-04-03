@@ -24,6 +24,7 @@ public class KnowledgeDoc implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 文档 ID */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /** 所属景区 ID */

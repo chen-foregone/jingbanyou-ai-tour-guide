@@ -1,19 +1,25 @@
 package cn.edu.gdou.jingbanyou.manage.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Date;
 
 /**
  * 知识库文档响应 VO
- * 
- * @author JingbanYou Team
- * @date 2026-04-02
+ *
+ * @author jingbanyou
  */
 @Data
-public class KnowledgeDocVO implements Serializable {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class KnowledgeDocVO implements Serializable
+{
 
     private static final long serialVersionUID = 1L;
 

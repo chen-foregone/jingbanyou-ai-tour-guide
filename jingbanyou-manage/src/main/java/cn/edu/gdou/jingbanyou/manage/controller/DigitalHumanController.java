@@ -1,9 +1,13 @@
 package cn.edu.gdou.jingbanyou.manage.controller;
 
-import cn.edu.gdou.jingbanyou.common.core.domain.R;
+import cn.edu.gdou.jingbanyou.common.annotation.Log;
+import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
+import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
+import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
+import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
 import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -12,14 +16,14 @@ import java.util.List;
 
 /**
  * AI 数字人形象配置 Controller（赛题要求核心功能）
- * 
- * 功能：管理数字人的外观、服装、声音等配置，使其贴合景区文化特色
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @RestController
 @RequestMapping("/manage/digital-human")
-public class DigitalHumanController {
-
+public class DigitalHumanController extends BaseController
+{
     @Autowired
     private IDigitalHumanConfigService digitalHumanService;
 
@@ -27,79 +31,69 @@ public class DigitalHumanController {
      * 获取数字人列表
      */
     @GetMapping("/list")
-    public R<List<DigitalHumanConfig>> list(DigitalHumanConfig config) {
+    public TableDataInfo list(DigitalHumanConfig config)
+    {
+        startPage();
         List<DigitalHumanConfig> list = digitalHumanService.list();
-        return R.ok(list);
-    }
-
-    /**
-     * 分页查询数字人
-     */
-    @GetMapping("/page")
-    public R<Page<DigitalHumanConfig>> page(
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            DigitalHumanConfig config) {
-        Page<DigitalHumanConfig> page = new Page<>(pageNum, pageSize);
-        Page<DigitalHumanConfig> result = digitalHumanService.page(page);
-        return R.ok(result);
+        return getDataTable(list);
     }
 
     /**
      * 根据 ID 查询数字人详情
      */
     @GetMapping("/{id}")
-    public R<DigitalHumanConfig> getInfo(@PathVariable Long id) {
-        DigitalHumanConfig config = digitalHumanService.getById(id);
-        return R.ok(config);
+    public AjaxResult getInfo(@PathVariable Long id)
+    {
+        return success(digitalHumanService.getById(id));
     }
 
     /**
      * 获取景区默认数字人
      */
     @GetMapping("/scenic/{scenicId}/default")
-    public R<DigitalHumanConfig> getDefault(@PathVariable Long scenicId) {
-        DigitalHumanConfig config = digitalHumanService.getDefaultByScenicId(scenicId);
-        return R.ok(config);
+    public AjaxResult getDefault(@PathVariable Long scenicId)
+    {
+        return success(digitalHumanService.getDefaultByScenicId(scenicId));
     }
 
     /**
      * 新增数字人配置
      */
+    @Log(title = "数字人管理", businessType = BusinessType.INSERT)
     @PostMapping
-    public R<Boolean> add(@RequestBody DigitalHumanConfig config) {
-        log.info("新增数字人配置：{}", config.getHumanName());
-        boolean result = digitalHumanService.save(config);
-        return result ? R.ok() : R.fail("添加失败");
+    public AjaxResult add(@Valid @RequestBody DigitalHumanConfig config)
+    {
+        return toAjax(digitalHumanService.save(config));
     }
 
     /**
      * 修改数字人配置
      */
+    @Log(title = "数字人管理", businessType = BusinessType.UPDATE)
     @PutMapping
-    public R<Boolean> edit(@RequestBody DigitalHumanConfig config) {
-        boolean result = digitalHumanService.updateById(config);
-        return result ? R.ok() : R.fail("修改失败");
+    public AjaxResult edit(@Valid @RequestBody DigitalHumanConfig config)
+    {
+        return toAjax(digitalHumanService.updateById(config));
     }
 
     /**
      * 设置默认数字人
      */
+    @Log(title = "数字人管理", businessType = BusinessType.UPDATE)
     @PostMapping("/{id}/set-default")
-    public R<Boolean> setDefault(
-            @PathVariable Long id,
-            @RequestParam Long scenicId) {
-        log.info("设置默认数字人：id={}, scenicId={}", id, scenicId);
+    public AjaxResult setDefault(@PathVariable Long id, @RequestParam Long scenicId)
+    {
         digitalHumanService.setDefault(id, scenicId);
-        return R.ok();
+        return success();
     }
 
     /**
      * 删除数字人配置
      */
+    @Log(title = "数字人管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
-    public R<Boolean> remove(@PathVariable Long id) {
-        boolean result = digitalHumanService.removeById(id);
-        return result ? R.ok() : R.fail("删除失败");
+    public AjaxResult remove(@PathVariable Long id)
+    {
+        return toAjax(digitalHumanService.removeById(id));
     }
 }

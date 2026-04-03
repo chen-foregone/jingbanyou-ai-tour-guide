@@ -17,8 +17,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>17</java.version>
-        <spring-boot.version>3.4.3</spring-boot.version>
-        <mybatis-spring-boot.version>4.0.1</mybatis-spring-boot.version>
+        <spring-boot.version>3.5.0</spring-boot.version>
+        <mybatis-spring-boot.version>3.0.4</mybatis-spring-boot.version>
         <mybatis-plus.version>3.5.9</mybatis-plus.version>
         <druid.version>1.2.28</druid.version>
         <yauaa.version>8.1.0</yauaa.version>
@@ -31,7 +31,8 @@
         <velocity.version>2.3</velocity.version>
         <jwt.version>0.9.1</jwt.version>
         <jaxb-api.version>2.3.1</jaxb-api.version>
-        <springdoc.version>3.0.2</springdoc.version>
+        <springdoc.version>2.8.6</springdoc.version>
+        <spring-ai-alibaba.version>1.0.0.2</spring-ai-alibaba.version>
     </properties>
 
     <!-- 依赖声明 -->
@@ -50,7 +51,7 @@
             <!-- 阿里数据库连接池 -->
             <dependency>
                 <groupId>com.alibaba</groupId>
-                <artifactId>druid-spring-boot-4-starter</artifactId>
+                <artifactId>druid-spring-boot-3-starter</artifactId>
                 <version>${druid.version}</version>
             </dependency>
 
@@ -157,13 +158,6 @@
                 <version>${mybatis-plus.version}</version>
             </dependency>
 
-            <!-- Spring AOP 支持 -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-aop</artifactId>
-                <version>${spring-boot.version}</version>
-            </dependency>
-
             <!-- JSpecify 注解 -->
             <dependency>
                 <groupId>org.jspecify</groupId>
@@ -227,6 +221,20 @@
                 <version>${jingbanyou.version}</version>
             </dependency>
 
+            <!-- 管理后台模块-->
+            <dependency>
+                <groupId>cn.edu.gdou</groupId>
+                <artifactId>jingbanyou-manage</artifactId>
+                <version>${jingbanyou.version}</version>
+            </dependency>
+
+            <!-- Spring AI Alibaba DashScope -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -272,6 +280,14 @@
             <releases>
                 <enabled>true</enabled>
             </releases>
+        </repository>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
 

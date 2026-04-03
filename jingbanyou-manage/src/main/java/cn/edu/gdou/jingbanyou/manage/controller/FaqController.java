@@ -1,24 +1,29 @@
 package cn.edu.gdou.jingbanyou.manage.controller;
 
-import cn.edu.gdou.jingbanyou.common.core.domain.R;
+import cn.edu.gdou.jingbanyou.common.annotation.Log;
+import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
+import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
+import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
+import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.manage.entity.Faq;
 import cn.edu.gdou.jingbanyou.manage.service.IFaqService;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 常见问答管理 Controller（赛题要求：保障问答准确率 90%）
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @RestController
 @RequestMapping("/manage/faq")
-public class FaqController {
-
+public class FaqController extends BaseController
+{
     @Autowired
     private IFaqService faqService;
 
@@ -26,87 +31,90 @@ public class FaqController {
      * 获取 FAQ 列表
      */
     @GetMapping("/list")
-    public R<List<Faq>> list(Faq faq) {
+    public TableDataInfo list(Faq faq)
+    {
+        startPage();
         List<Faq> list = faqService.list();
-        return R.ok(list);
-    }
-
-    /**
-     * 分页查询 FAQ
-     */
-    @GetMapping("/page")
-    public R<Page<Faq>> page(
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            Faq faq) {
-        Page<Faq> page = new Page<>(pageNum, pageSize);
-        Page<Faq> result = faqService.page(page);
-        return R.ok(result);
+        return getDataTable(list);
     }
 
     /**
      * 根据 ID 查询 FAQ
      */
     @GetMapping("/{id}")
-    public R<Faq> getInfo(@PathVariable Long id) {
-        Faq faq = faqService.getById(id);
-        return R.ok(faq);
+    public AjaxResult getInfo(@PathVariable Long id)
+    {
+        return success(faqService.getById(id));
     }
 
     /**
      * 智能匹配相似问题（RAG 检索）
      */
     @GetMapping("/match")
-    public R<Faq> matchQuestion(
-            @RequestParam Long scenicId,
-            @RequestParam String question) {
-        
+    public AjaxResult matchQuestion(@RequestParam Long scenicId, @RequestParam String question)
+    {
         Faq matchedFaq = faqService.matchSimilarQuestion(scenicId, question);
-        return R.ok(matchedFaq);
+        return success(matchedFaq);
+    }
+
+    /**
+     * 获取热门问答
+     */
+    @GetMapping("/hot")
+    public AjaxResult hotQuestions(@RequestParam Long scenicId,
+                                   @RequestParam(defaultValue = "10") Integer limit)
+    {
+        List<Faq> hotList = faqService.getHotQuestions(scenicId, limit);
+        return success(hotList);
     }
 
     /**
      * 新增 FAQ
      */
+    @Log(title = "FAQ管理", businessType = BusinessType.INSERT)
     @PostMapping
-    public R<Boolean> add(@RequestBody Faq faq) {
-        boolean result = faqService.save(faq);
-        return result ? R.ok() : R.fail("添加失败");
+    public AjaxResult add(@Valid @RequestBody Faq faq)
+    {
+        return toAjax(faqService.save(faq));
     }
 
     /**
      * 修改 FAQ
      */
+    @Log(title = "FAQ管理", businessType = BusinessType.UPDATE)
     @PutMapping
-    public R<Boolean> edit(@RequestBody Faq faq) {
-        boolean result = faqService.updateById(faq);
-        return result ? R.ok() : R.fail("修改失败");
+    public AjaxResult edit(@Valid @RequestBody Faq faq)
+    {
+        return toAjax(faqService.updateById(faq));
     }
 
     /**
      * 删除 FAQ
      */
+    @Log(title = "FAQ管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
-    public R<Boolean> remove(@PathVariable Long id) {
-        boolean result = faqService.removeById(id);
-        return result ? R.ok() : R.fail("删除失败");
+    public AjaxResult remove(@PathVariable Long id)
+    {
+        return toAjax(faqService.removeById(id));
     }
 
     /**
      * 点赞
      */
     @PostMapping("/{id}/helpful")
-    public R<Boolean> markHelpful(@PathVariable Long id) {
-        // TODO: 增加 helpful_count
-        return R.ok();
+    public AjaxResult markHelpful(@PathVariable Long id)
+    {
+        faqService.incrementHelpfulCount(id);
+        return success();
     }
 
     /**
      * 点踩
      */
     @PostMapping("/{id}/unhelpful")
-    public R<Boolean> markUnhelpful(@PathVariable Long id) {
-        // TODO: 增加 unhelpful_count
-        return R.ok();
+    public AjaxResult markUnhelpful(@PathVariable Long id)
+    {
+        faqService.incrementUnhelpfulCount(id);
+        return success();
     }
 }

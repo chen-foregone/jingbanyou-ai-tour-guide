@@ -24,6 +24,7 @@ public class Faq implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 问答 ID */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /** 所属景区 ID */

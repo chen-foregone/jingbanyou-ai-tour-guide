@@ -25,6 +25,7 @@ public class ScenicArea implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 景区 ID */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /** 景区名称 */

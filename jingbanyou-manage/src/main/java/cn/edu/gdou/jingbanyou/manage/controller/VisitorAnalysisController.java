@@ -1,6 +1,9 @@
 package cn.edu.gdou.jingbanyou.manage.controller;
 
-import cn.edu.gdou.jingbanyou.common.core.domain.R;
+import cn.edu.gdou.jingbanyou.common.annotation.Log;
+import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
+import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
+import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorAnalysis;
 import cn.edu.gdou.jingbanyou.manage.service.IVisitorAnalysisService;
 import lombok.extern.slf4j.Slf4j;
@@ -13,14 +16,14 @@ import java.util.Map;
 
 /**
  * 游客感受度分析 Controller（赛题要求核心功能）
- * 
- * 功能：分析交互记录，生成游客关注点、情感趋势报告及服务建议
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @RestController
 @RequestMapping("/manage/analysis")
-public class VisitorAnalysisController {
-
+public class VisitorAnalysisController extends BaseController
+{
     @Autowired
     private IVisitorAnalysisService analysisService;
 
@@ -28,57 +31,54 @@ public class VisitorAnalysisController {
      * 获取情感趋势数据
      */
     @GetMapping("/emotion-trend")
-    public R<Map<String, Object>> getEmotionTrend(
-            @RequestParam Long scenicId,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") String startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") String endDate) {
-        
+    public AjaxResult getEmotionTrend(@RequestParam Long scenicId,
+                                       @RequestParam String startDate,
+                                       @RequestParam String endDate)
+    {
         Map<String, Object> trend = analysisService.getEmotionTrend(scenicId, startDate, endDate);
-        return R.ok(trend);
+        return success(trend);
     }
 
     /**
      * 获取游客关注点 TOP10
      */
     @GetMapping("/focus-points")
-    public R<Map<String, Object>> getFocusPoints(
-            @RequestParam Long scenicId,
-            @RequestParam(defaultValue = "10") Integer limit) {
-        
+    public AjaxResult getFocusPoints(@RequestParam Long scenicId,
+                                      @RequestParam(defaultValue = "10") Integer limit)
+    {
         Map<String, Object> points = analysisService.getFocusPoints(scenicId, limit);
-        return R.ok(points);
+        return success(points);
     }
 
     /**
      * 获取满意度趋势
      */
     @GetMapping("/satisfaction-trend")
-    public R<Map<String, Object>> getSatisfactionTrend(
-            @RequestParam Long scenicId,
-            @RequestParam(defaultValue = "30") Integer days) {
-        
+    public AjaxResult getSatisfactionTrend(@RequestParam Long scenicId,
+                                            @RequestParam(defaultValue = "30") Integer days)
+    {
         Map<String, Object> trend = analysisService.getSatisfactionTrend(scenicId, days);
-        return R.ok(trend);
+        return success(trend);
     }
 
     /**
      * 生成日报分析（AI 自动生成）
      */
+    @Log(title = "游客分析", businessType = BusinessType.INSERT)
     @PostMapping("/generate-daily-report")
-    public R<VisitorAnalysis> generateDailyReport(
-            @RequestParam Long scenicId,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
-        
+    public AjaxResult generateDailyReport(@RequestParam Long scenicId,
+                                           @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date)
+    {
         VisitorAnalysis report = analysisService.generateDailyReport(scenicId, date);
-        return R.ok(report);
+        return success(report);
     }
 
     /**
      * 查看历史分析报告
      */
     @GetMapping("/{id}")
-    public R<VisitorAnalysis> getReport(@PathVariable Long id) {
-        VisitorAnalysis report = analysisService.getById(id);
-        return R.ok(report);
+    public AjaxResult getReport(@PathVariable Long id)
+    {
+        return success(analysisService.getById(id));
     }
 }

@@ -16,7 +16,7 @@ ruoyi:
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
-  port: 8080
+  port: 8081
   servlet:
     # 应用的访问路径
     context-path: /
@@ -47,6 +47,8 @@ user:
 
 # Spring配置
 spring:
+  main:
+    allow-bean-definition-overriding: true
   # 资源信息
   messages:
     # 国际化资源文件路径
@@ -60,6 +62,9 @@ spring:
       max-file-size: 10MB
       # 设置总上传的文件大小
       max-request-size: 20MB
+  ai:
+    dashscope:
+      api-key: sk-25a0e981c714438e85fe067faaf64295
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss

@@ -1,20 +1,25 @@
 package cn.edu.gdou.jingbanyou.manage.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 /**
  * 知识库文档请求 DTO
- * 
- * @author JingbanYou Team
- * @date 2026-04-02
+ *
+ * @author jingbanyou
  */
 @Data
-public class KnowledgeDocRequest implements Serializable {
-
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class KnowledgeDocRequest implements Serializable
+{
     private static final long serialVersionUID = 1L;
 
     /** 文档 ID (更新时必填) */
