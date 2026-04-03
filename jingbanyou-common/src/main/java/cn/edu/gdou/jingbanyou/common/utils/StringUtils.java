@@ -6,7 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.lang3.Strings;
+
+import nl.basjes.parse.useragent.yauaa.shaded.org.apache.commons.lang3.Strings;
 import org.springframework.util.AntPathMatcher;
 import cn.edu.gdou.jingbanyou.common.constant.Constants;
 import cn.edu.gdou.jingbanyou.common.core.text.StrFormatter;
@@ -535,7 +536,7 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils
      * 不区分大小写地检查一个字符串是否以指定前缀开头。
      *
      * @param str 待检查的字符串
-     * @param 要查找的前缀
+     * @param prefix 要查找的前缀
      * @return 结果
      */
     public static boolean startsWithIgnoreCase(final CharSequence str, final CharSequence prefix)
