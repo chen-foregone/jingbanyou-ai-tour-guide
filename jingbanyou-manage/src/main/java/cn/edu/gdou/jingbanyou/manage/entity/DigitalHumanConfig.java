@@ -33,41 +33,20 @@ public class DigitalHumanConfig implements Serializable {
     /** 数字人名称 */
     private String humanName;
 
-    /** 数字人类型 2D/3D */
-    private String humanType;
-
-    /** 外观配置 (模型地址/参数/材质，JSON) */
+    /** 外观配置 (2D驱动参数JSON，如模型选择、增强开关等) */
     private String appearanceConfig;
-
-    /** 服装配置 (多套服装，JSON) */
-    private String costumeConfig;
 
     /** 语音合成参数 (JSON) */
     private String voiceConfig;
 
-    /** 发型描述 */
-    private String hairstyle;
-
-    /** 配饰描述 */
-    private String accessory;
-
     /** 口型同步 0-关闭 1-开启 */
     private Integer lipSync;
-
-    /** 情感表情 0-关闭 1-开启 */
-    private Integer emotionExpr;
-
-    /** 手势动作 0-关闭 1-开启 */
-    private Integer gestureAction;
 
     /** 默认问候语 */
     private String defaultGreeting;
 
-    /** 头像预览图 */
+    /** 人物图片地址（2D驱动源图） */
     private String avatarImage;
-
-    /** 演示视频 */
-    private String previewVideo;
 
     /** 是否默认 0-否 1-是 */
     private Integer isDefault;
