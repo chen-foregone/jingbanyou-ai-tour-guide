@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.manage.controller;
 
 import cn.edu.gdou.jingbanyou.common.annotation.Log;
+import org.springframework.security.access.prepost.PreAuthorize;
 import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
@@ -20,6 +21,7 @@ import java.util.List;
  * @author jingbanyou
  */
 @Slf4j
+@PreAuthorize("@ss.hasRole('admin') or @ss.hasRole('scenic_admin')")
 @RestController
 @RequestMapping("/manage/digital-human")
 public class DigitalHumanController extends BaseController

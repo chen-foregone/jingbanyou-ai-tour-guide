@@ -59,6 +59,12 @@
             <artifactId>jingbanyou-system</artifactId>
         </dependency>
 
+        <!-- MyBatis-Plus（用于 MybatisSqlSessionFactoryBean） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>

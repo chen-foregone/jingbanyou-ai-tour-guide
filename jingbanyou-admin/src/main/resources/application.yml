@@ -124,6 +124,14 @@ mybatis:
   # 加载全局的配置文件
   configLocation: classpath:mybatis/mybatis-config.xml
 
+# MyBatis-Plus配置（与MyBatis共存，manage模块使用）
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*Mapper.xml
+  type-aliases-package: cn.edu.gdou.jingbanyou.**.domain
+  global-config:
+    db-config:
+      id-type: auto
+
 # PageHelper分页插件
 pagehelper:
   helperDialect: mysql

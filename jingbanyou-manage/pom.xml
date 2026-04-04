@@ -21,6 +21,13 @@
         <dependency>
             <groupId>cn.edu.gdou</groupId>
             <artifactId>jingbanyou-common</artifactId>
+            <exclusions>
+                <!-- 排除普通MyBatis，由MyBatis-Plus完全替代 -->
+                <exclusion>
+                    <groupId>org.mybatis.spring.boot</groupId>
+                    <artifactId>mybatis-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- 若依框架核心（传递: druid, system, kaptcha 等） -->
