@@ -19,7 +19,7 @@ import java.util.Date;
 @Data
 @ToString
 @TableName("manage_digital_human_config")
-public class DigitalHumanConfig implements Serializable {
+public class DigitalHumanConfig implements Serializable  {
 
     private static final long serialVersionUID = 1L;
 

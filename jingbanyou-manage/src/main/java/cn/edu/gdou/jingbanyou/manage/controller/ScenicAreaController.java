@@ -33,7 +33,7 @@ public class ScenicAreaController extends BaseController
      * 获取景区列表
      */
     @GetMapping("/list")
-    public TableDataInfo list(ScenicArea scenicArea)
+    public TableDataInfo list()
     {
         startPage();
         List<ScenicArea> list = scenicAreaService.list();

@@ -47,14 +47,6 @@ public interface VisitorInteractionMapper extends BaseMapper<VisitorInteraction>
     List<HotQuestionVO> selectHotQuestions(@Param("scenicId") Long scenicId, @Param("limit") int limit);
 
     /**
-     * 查询设备分布
-     *
-     * @param scenicId 景区ID
-     * @return 设备分布列表
-     */
-    List<Map<String, Object>> selectDeviceDistribution(@Param("scenicId") Long scenicId);
-
-    /**
      * 汇总指定日期的统计数据（用于写入manage_operation_stats）
      *
      * @param scenicId 景区ID

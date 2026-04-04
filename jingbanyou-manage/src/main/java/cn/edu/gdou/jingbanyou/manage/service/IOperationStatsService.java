@@ -26,11 +26,6 @@ public interface IOperationStatsService extends IService<OperationStats> {
     Map<String, Object> getHotQuestions(Long scenicId, Integer limit);
 
     /**
-     * 获取设备分布统计
-     */
-    Map<String, Object> getDeviceDistribution(Long scenicId);
-
-    /**
      * 生成统计数据
      */
     void generateStats(Long scenicId, String date, String type);

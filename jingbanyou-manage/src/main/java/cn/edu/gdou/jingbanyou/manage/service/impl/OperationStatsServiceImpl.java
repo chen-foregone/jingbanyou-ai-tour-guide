@@ -62,15 +62,6 @@ public class OperationStatsServiceImpl extends ServiceImpl<OperationStatsMapper,
     }
 
     @Override
-    public Map<String, Object> getDeviceDistribution(Long scenicId)
-    {
-        Map<String, Object> result = new HashMap<>();
-        List<Map<String, Object>> distribution = visitorInteractionMapper.selectDeviceDistribution(scenicId);
-        result.put("distribution", distribution);
-        return result;
-    }
-
-    @Override
     public void generateStats(Long scenicId, String date, String type)
     {
         log.info("生成统计数据：scenicId={}, date={}, type={}", scenicId, date, type);

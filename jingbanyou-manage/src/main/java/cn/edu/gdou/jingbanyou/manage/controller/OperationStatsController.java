@@ -58,16 +58,6 @@ public class OperationStatsController extends BaseController
     }
 
     /**
-     * 设备分布统计
-     */
-    @GetMapping("/device-distribution")
-    public AjaxResult getDeviceDistribution(@RequestParam Long scenicId)
-    {
-        Map<String, Object> distribution = statsService.getDeviceDistribution(scenicId);
-        return success(distribution);
-    }
-
-    /**
      * 手动触发统计任务
      */
     @Log(title = "统计数据", businessType = BusinessType.INSERT)
