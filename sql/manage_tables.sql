@@ -107,7 +107,7 @@ CREATE TABLE `manage_knowledge_chunk` (
     `chunk_index` INT NOT NULL COMMENT '切片序号 (从 0 开始)',
     `chunk_content` TEXT NOT NULL COMMENT '切片内容',
     `chunk_tokens` INT COMMENT 'Token 数量',
-    `vector_id` VARCHAR(128) COMMENT '向量 ID(ChromaDB/Milvus)',
+    `vector_id` VARCHAR(128) COMMENT '向量 ID (Redis Stack)',
     `embedding_version` VARCHAR(50) COMMENT 'Embedding 模型版本',
     `metadata` JSON COMMENT '元数据 (页码/章节/标签等)',
     `similarity_avg` DECIMAL(5,4) COMMENT '平均相似度 (用于优化)',
@@ -124,7 +124,7 @@ CREATE TABLE `manage_faq` (
     `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '问答 ID',
     `scenic_id` BIGINT NOT NULL COMMENT '所属景区 ID',
     `question` TEXT NOT NULL COMMENT '用户问题 (标准问法)',
-    `question_keywords` VARCHAR(500) COMMENT '问题关键词 (逗号分隔)',
+    `question_keywords` VARCHAR(500) COMMENT '问题关键词 (逗号分隔，Redis Stack 全文检索已覆盖此功能，仅保留供后台管理筛选用)',
     `answer` TEXT NOT NULL COMMENT '标准回答',
     `answer_type` VARCHAR(20) DEFAULT 'text' COMMENT '回答类型 text/rich/html',
     `spot_id` BIGINT DEFAULT NULL COMMENT '关联景点 ID(可选)',
@@ -142,28 +142,20 @@ CREATE TABLE `manage_faq` (
     FOREIGN KEY (`scenic_id`) REFERENCES `manage_scenic_area`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`spot_id`) REFERENCES `manage_scenic_spot`(`id`) ON DELETE SET NULL,
     INDEX `idx_scenic_id` (`scenic_id`),
-    INDEX `idx_spot_id` (`spot_id`),
-    FULLTEXT INDEX `ft_question` (`question`) WITH PARSER ngram
+    INDEX `idx_spot_id` (`spot_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='景区常见问答表 (FAQ)';
 
--- ====================== 7. AI 数字人形象配置表（外观/声音/服装管理） ======================
+-- ====================== 7. AI 数字人形象配置表（2D 方案） ======================
 DROP TABLE IF EXISTS `manage_digital_human_config`;
 CREATE TABLE `manage_digital_human_config` (
     `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '配置 ID',
     `scenic_id` BIGINT NOT NULL COMMENT '所属景区 ID',
     `human_name` VARCHAR(50) NOT NULL COMMENT '数字人名称',
-    `human_type` VARCHAR(20) DEFAULT '2D' COMMENT '数字人类型 2D/3D',
-    `appearance_config` JSON COMMENT '外观配置 (模型地址/参数/材质)',
-    `costume_config` JSON COMMENT '服装配置 (多套服装)',
+    `appearance_config` JSON COMMENT '外观配置 (2D 驱动参数 JSON，如模型选择、增强开关等)',
     `voice_config` JSON NOT NULL COMMENT '语音合成参数 (TTS 模型/音色/语速/音调)',
-    `hairstyle` VARCHAR(100) COMMENT '发型描述',
-    `accessory` VARCHAR(100) COMMENT '配饰描述',
     `lip_sync` TINYINT DEFAULT 1 COMMENT '口型同步 0-关闭 1-开启',
-    `emotion_expr` TINYINT DEFAULT 1 COMMENT '情感表情 0-关闭 1-开启',
-    `gesture_action` TINYINT DEFAULT 1 COMMENT '手势动作 0-关闭 1-开启',
     `default_greeting` TEXT COMMENT '默认问候语',
-    `avatar_image` VARCHAR(255) COMMENT '头像预览图',
-    `preview_video` VARCHAR(255) COMMENT '演示视频',
+    `avatar_image` VARCHAR(255) COMMENT '人物图片地址 (2D 驱动源图)',
     `is_default` TINYINT NOT NULL DEFAULT 0 COMMENT '是否默认 0-否 1-是',
     `creator` BIGINT NOT NULL COMMENT '配置人',
     `updater` BIGINT COMMENT '更新人',
@@ -171,9 +163,8 @@ CREATE TABLE `manage_digital_human_config` (
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`scenic_id`) REFERENCES `manage_scenic_area`(`id`) ON DELETE CASCADE,
     INDEX `idx_scenic_id` (`scenic_id`),
-    INDEX `idx_human_type` (`human_type`),
     INDEX `idx_is_default` (`is_default`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 数字人形象配置表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 数字人形象配置表 (2D 方案)';
 
 -- ====================== 8. 数字人动作库表（表情/手势/肢体） ======================
 DROP TABLE IF EXISTS `manage_digital_human_action`;
@@ -313,28 +304,19 @@ CREATE TABLE `manage_visitor_analysis` (
 -- ====================== 13. 景区运营统计表（数据大屏） ======================
 DROP TABLE IF EXISTS `manage_operation_stats`;
 CREATE TABLE `manage_operation_stats` (
-    `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '统计 ID',
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
     `scenic_id` BIGINT NOT NULL COMMENT '景区 ID',
-    `stats_date` DATE NOT NULL COMMENT '统计日期',
-    `stats_type` VARCHAR(10) NOT NULL COMMENT '统计类型 daily/weekly/monthly',
-    `service_count` INT DEFAULT 0 COMMENT '服务总人次',
-    `interaction_count` INT DEFAULT 0 COMMENT '总交互次数',
-    `avg_response_time` INT COMMENT '平均响应时间 (毫秒)',
-    `peak_hour` INT COMMENT '高峰时段 (0-23)',
-    `hot_faq_ids` VARCHAR(500) COMMENT '热门 FAQ ID 列表 (逗号分隔)',
-    `hot_routes` JSON COMMENT '热门路线 TOP5',
-    `satisfaction_trend` JSON COMMENT '满意度趋势数据',
-    `device_distribution` JSON COMMENT '设备分布 {mobile:0.7, desktop:0.2, kiosk:0.1}',
-    `visitor_source` JSON COMMENT '访客来源统计',
-    `conversion_rate` DECIMAL(5,4) COMMENT '转化率 (咨询→预订)',
-    `creator` BIGINT COMMENT '创建人',
-    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `stat_date` DATE NOT NULL COMMENT '统计日期',
+    `total_interactions` INT DEFAULT 0 COMMENT '总交互次数',
+    `unique_visitors` INT DEFAULT 0 COMMENT '独立访客数',
+    `avg_response_time_ms` INT DEFAULT 0 COMMENT '平均响应时间 (ms)',
+    `avg_satisfaction` DECIMAL(3,2) DEFAULT 0.00 COMMENT '平均满意度',
+    `text_count` INT DEFAULT 0 COMMENT '文本交互次数',
+    `voice_count` INT DEFAULT 0 COMMENT '语音交互次数',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     FOREIGN KEY (`scenic_id`) REFERENCES `manage_scenic_area`(`id`),
-    UNIQUE KEY `uk_stats` (`scenic_id`, `stats_date`, `stats_type`),
-    INDEX `idx_stats_date` (`stats_date`),
-    INDEX `idx_stats_type` (`stats_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='景区运营数据统计表 (数据大屏)';
+    UNIQUE KEY `uk_scenic_date` (`scenic_id`, `stat_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运营统计日汇总表';
 
 -- ====================== 14. 系统全局配置表 ======================
 DROP TABLE IF EXISTS `manage_config`;

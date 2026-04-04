@@ -7,12 +7,19 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 常见问答 Service 实现类（赛题要求：保障问答准确率 90%）
+ * 使用 DashScope text-embedding-v2 + Redis Stack 向量检索
  *
  * @author jingbanyou
  */
@@ -20,16 +27,47 @@ import java.util.List;
 @Service
 public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqService
 {
+    @Autowired
+    private VectorStore redisVectorStore;
+
     @Override
     public Faq matchSimilarQuestion(Long scenicId, String question)
     {
-        // 基于MySQL全文检索（表已建ngram索引）做关键词匹配
-        List<Faq> results = baseMapper.selectSimilarQuestions(scenicId, question);
-        if (results != null && !results.isEmpty())
+        SearchRequest request = SearchRequest.builder()
+                .query(question)
+                .topK(1)
+                .similarityThreshold(0.75)
+                .filterExpression("scenicId == '" + scenicId + "'")
+                .build();
+
+        List<Document> results = redisVectorStore.similaritySearch(request);
+        if (results == null || results.isEmpty())
         {
-            return results.get(0);
+            return null;
         }
-        return null;
+
+        String faqIdStr = (String) results.get(0).getMetadata().get("faqId");
+        if (faqIdStr == null)
+        {
+            return null;
+        }
+
+        return getById(Long.parseLong(faqIdStr));
+    }
+
+    @Override
+    public void vectorizeFaq(Faq faq)
+    {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("faqId", String.valueOf(faq.getId()));
+        metadata.put("scenicId", String.valueOf(faq.getScenicId()));
+
+        Document doc = new Document(faq.getQuestion(), metadata);
+        redisVectorStore.add(List.of(doc));
+
+        faq.setVectorId(doc.getId());
+        updateById(faq);
+        log.info("FAQ [{}] 向量化完成，vectorId={}", faq.getId(), doc.getId());
     }
 
     @Override
@@ -53,7 +91,6 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
     @Override
     public List<Faq> getHotQuestions(Long scenicId, Integer limit)
     {
-        // 使用 MyBatis-Plus 分页查询替代 .last("LIMIT")，避免SQL注入
         Page<Faq> page = new Page<>(1, limit != null ? limit : 10);
         Page<Faq> result = page(page, new LambdaQueryWrapper<Faq>()
                 .eq(Faq::getScenicId, scenicId)

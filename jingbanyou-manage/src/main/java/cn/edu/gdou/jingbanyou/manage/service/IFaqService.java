@@ -13,13 +13,20 @@ import java.util.List;
 public interface IFaqService extends IService<Faq>
 {
     /**
-     * 智能匹配相似问题
+     * 智能匹配相似问题（Redis 向量检索）
      *
      * @param scenicId 景区ID
      * @param question 用户问题
      * @return FAQ
      */
     public Faq matchSimilarQuestion(Long scenicId, String question);
+
+    /**
+     * 向量化 FAQ 并存入 Redis Vector Store
+     *
+     * @param faq FAQ 对象（需已持久化，id 不为空）
+     */
+    public void vectorizeFaq(Faq faq);
 
     /**
      * 统计 FAQ 被咨询次数

@@ -33,7 +33,7 @@ public class DigitalHumanController extends BaseController
      * 获取数字人列表
      */
     @GetMapping("/list")
-    public TableDataInfo list(DigitalHumanConfig config)
+    public TableDataInfo list()
     {
         startPage();
         List<DigitalHumanConfig> list = digitalHumanService.list();

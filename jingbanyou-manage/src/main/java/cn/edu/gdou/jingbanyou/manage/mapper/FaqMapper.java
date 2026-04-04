@@ -6,8 +6,6 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
-import java.util.List;
-
 /**
  * 常见问答 Mapper 接口
  *
@@ -16,15 +14,6 @@ import java.util.List;
 @Mapper
 public interface FaqMapper extends BaseMapper<Faq>
 {
-    /**
-     * 全文检索匹配相似问题
-     *
-     * @param scenicId 景区ID
-     * @param keyword 关键词
-     * @return FAQ列表
-     */
-    List<Faq> selectSimilarQuestions(@Param("scenicId") Long scenicId, @Param("keyword") String keyword);
-
     /**
      * 咨询次数 +1
      *

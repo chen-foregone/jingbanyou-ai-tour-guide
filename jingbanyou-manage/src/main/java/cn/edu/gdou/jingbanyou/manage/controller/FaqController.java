@@ -33,7 +33,7 @@ public class FaqController extends BaseController
      * 获取 FAQ 列表
      */
     @GetMapping("/list")
-    public TableDataInfo list(Faq faq)
+    public TableDataInfo list()
     {
         startPage();
         List<Faq> list = faqService.list();
@@ -77,7 +77,12 @@ public class FaqController extends BaseController
     @PostMapping
     public AjaxResult add(@Valid @RequestBody Faq faq)
     {
-        return toAjax(faqService.save(faq));
+        boolean saved = faqService.save(faq);
+        if (saved)
+        {
+            faqService.vectorizeFaq(faq);
+        }
+        return toAjax(saved);
     }
 
     /**
@@ -87,7 +92,12 @@ public class FaqController extends BaseController
     @PutMapping
     public AjaxResult edit(@Valid @RequestBody Faq faq)
     {
-        return toAjax(faqService.updateById(faq));
+        boolean updated = faqService.updateById(faq);
+        if (updated)
+        {
+            faqService.vectorizeFaq(faq);
+        }
+        return toAjax(updated);
     }
 
     /**

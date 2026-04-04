@@ -33,7 +33,7 @@ public class KnowledgeDoc implements Serializable {
     /** 文档标题 */
     private String docTitle;
 
-    /** 文档类型 讲解词/文史资料/攻略/公告/FAQ */
+    /** 文档类型 讲解词/文史资料/攻略/公告 */
     private String docType;
 
     /** 文档完整内容 */

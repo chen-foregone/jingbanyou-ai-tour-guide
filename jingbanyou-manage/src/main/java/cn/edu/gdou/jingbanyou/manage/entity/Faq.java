@@ -30,16 +30,16 @@ public class Faq implements Serializable {
     /** 所属景区 ID */
     private Long scenicId;
 
-    /** 用户问题 (标准问法) */
+    /** 用户问题 */
     private String question;
 
-    /** 问题关键词 (逗号分隔) */
+    /** 问题关键词 */
     private String questionKeywords;
 
-    /** 标准回答 */
+    /** 回答 */
     private String answer;
 
-    /** 回答类型 text/rich/html */
+    /** 回答类型 text 直接显示，无需解析  /rich 用 MD 渲染器处理，支持加粗/列表/表格等/html 用 v-html / innerHTML 直接插入 */
     private String answerType;
 
     /** 关联景点 ID(可选) */

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper">
+
+    <!-- 今日概览统计 -->
+    <select id="selectTodayOverview" resultType="cn.edu.gdou.jingbanyou.manage.dto.OperationOverviewVO">
+        SELECT
+            COUNT(*)                                                        AS totalInteractions,
+            COUNT(DISTINCT visitor_id)                                      AS uniqueVisitors,
+            IFNULL(AVG(response_time_ms), 0)                                AS avgResponseTimeMs,
+            IFNULL(AVG(feedback_score), 0)                                  AS avgSatisfaction,
+            SUM(IF(interaction_type = 'text', 1, 0))                        AS textCount,
+            SUM(IF(interaction_type = 'voice', 1, 0))                       AS voiceCount
+        FROM manage_visitor_interaction
+        WHERE DATE(create_time) = CURDATE()
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+    </select>
+
+    <!-- 最近N天的每日统计 -->
+    <select id="selectDailyStats" resultType="cn.edu.gdou.jingbanyou.manage.entity.OperationStats">
+        SELECT
+            DATE(create_time)                                               AS statDate,
+            COUNT(*)                                                        AS totalInteractions,
+            COUNT(DISTINCT visitor_id)                                      AS uniqueVisitors,
+            IFNULL(AVG(response_time_ms), 0)                                AS avgResponseTimeMs,
+            IFNULL(AVG(feedback_score), 0)                                  AS avgSatisfaction,
+            SUM(IF(interaction_type = 'text', 1, 0))                        AS textCount,
+            SUM(IF(interaction_type = 'voice', 1, 0))                       AS voiceCount
+        FROM manage_visitor_interaction
+        WHERE create_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+        GROUP BY DATE(create_time)
+        ORDER BY statDate ASC
+    </select>
+
+    <!-- 热门问题 TOP N -->
+    <select id="selectHotQuestions" resultType="cn.edu.gdou.jingbanyou.manage.dto.HotQuestionVO">
+        SELECT
+            user_question                                                   AS question,
+            COUNT(*)                                                        AS count
+        FROM manage_visitor_interaction
+        WHERE user_question IS NOT NULL AND user_question != ''
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+        GROUP BY user_question
+        ORDER BY count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 设备分布 -->
+    <select id="selectDeviceDistribution" resultType="java.util.Map">
+        SELECT
+            IFNULL(device_type, 'unknown')                                  AS deviceType,
+            COUNT(*)                                                        AS count
+        FROM manage_visitor_interaction
+        WHERE 1 = 1
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+        GROUP BY device_type
+    </select>
+
+    <!-- 指定日期汇总（写入 manage_operation_stats 用） -->
+    <select id="selectDaySummary" resultType="cn.edu.gdou.jingbanyou.manage.entity.OperationStats">
+        SELECT
+            #{scenicId}                                                     AS scenicId,
+            #{date}                                                         AS statDate,
+            COUNT(*)                                                        AS totalInteractions,
+            COUNT(DISTINCT visitor_id)                                      AS uniqueVisitors,
+            IFNULL(AVG(response_time_ms), 0)                                AS avgResponseTimeMs,
+            IFNULL(AVG(feedback_score), 0)                                  AS avgSatisfaction,
+            SUM(IF(interaction_type = 'text', 1, 0))                        AS textCount,
+            SUM(IF(interaction_type = 'voice', 1, 0))                       AS voiceCount
+        FROM manage_visitor_interaction
+        WHERE DATE(create_time) = #{date}
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+    </select>
+
+    <!-- 情感趋势（按日分组） -->
+    <select id="selectEmotionTrend" resultType="cn.edu.gdou.jingbanyou.manage.dto.EmotionTrendVO">
+        SELECT
+            DATE(create_time)                                               AS date,
+            SUM(IF(emotion_detected = 'positive', 1, 0))                    AS positiveCount,
+            SUM(IF(emotion_detected = 'neutral', 1, 0))                     AS neutralCount,
+            SUM(IF(emotion_detected = 'negative', 1, 0))                    AS negativeCount
+        FROM manage_visitor_interaction
+        WHERE DATE(create_time) BETWEEN #{startDate} AND #{endDate}
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+        GROUP BY DATE(create_time)
+        ORDER BY date ASC
+    </select>
+
+    <!-- 意图类型分布（关注点） -->
+    <select id="selectIntentDistribution" resultType="java.util.Map">
+        SELECT
+            IFNULL(intent_type, 'other')                                    AS intentType,
+            COUNT(*)                                                        AS count
+        FROM manage_visitor_interaction
+        WHERE intent_type IS NOT NULL AND intent_type != ''
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+        GROUP BY intent_type
+        ORDER BY count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 满意度趋势（最近N天） -->
+    <select id="selectSatisfactionTrend" resultType="java.util.Map">
+        SELECT
+            DATE(create_time)                                               AS date,
+            IFNULL(AVG(feedback_score), 0)                                  AS avgScore
+        FROM manage_visitor_interaction
+        WHERE create_time >= DATE_SUB(CURDATE(), INTERVAL #{days} DAY)
+              AND feedback_score IS NOT NULL
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+        GROUP BY DATE(create_time)
+        ORDER BY date ASC
+    </select>
+
+    <!-- 日报汇总 -->
+    <select id="selectDailyReportSummary" resultType="java.util.Map">
+        SELECT
+            COUNT(*)                                                        AS totalInteractions,
+            COUNT(DISTINCT visitor_id)                                      AS uniqueVisitors,
+            IFNULL(AVG(response_time_ms), 0)                                AS avgResponseTimeMs,
+            IFNULL(AVG(feedback_score), 0)                                  AS avgSatisfaction,
+            CONCAT('[',
+                GROUP_CONCAT(
+                    DISTINCT CONCAT('"', IFNULL(intent_type, 'other'), '"')
+                ),
+            ']')                                                            AS intentTypes,
+            CONCAT('{',
+                '"positive":', SUM(IF(emotion_detected = 'positive', 1, 0)), ',',
+                '"neutral":', SUM(IF(emotion_detected = 'neutral', 1, 0)), ',',
+                '"negative":', SUM(IF(emotion_detected = 'negative', 1, 0)),
+            '}')                                                            AS emotionDistribution
+        FROM manage_visitor_interaction
+        WHERE DATE(create_time) = #{date}
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+    </select>
+
+</mapper>
