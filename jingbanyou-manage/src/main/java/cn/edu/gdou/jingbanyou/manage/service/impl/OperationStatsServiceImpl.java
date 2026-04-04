@@ -43,8 +43,77 @@ public class OperationStatsServiceImpl extends ServiceImpl<OperationStatsMapper,
     {
         Map<String, Object> result = new HashMap<>();
         List<OperationStats> dailyStats = visitorInteractionMapper.selectDailyStats(scenicId, 7);
-        result.put("dailyStats", dailyStats);
+        
+        // 计算本周汇总数据
+        Map<String, Object> summary = calculateWeeklySummary(dailyStats);
+        
+        result.put("dailyStats", dailyStats);  // 每日明细（用于图表展示）
+        result.put("summary", summary);         // 本周汇总（用于卡片展示）
         return result;
+    }
+    
+    /**
+     * 计算本周汇总数据
+     */
+    private Map<String, Object> calculateWeeklySummary(List<OperationStats> dailyStats)
+    {
+        Map<String, Object> summary = new HashMap<>();
+        
+        if (dailyStats == null || dailyStats.isEmpty())
+        {
+            summary.put("totalInteractions", 0);
+            summary.put("uniqueVisitors", 0);
+            summary.put("avgResponseTimeMs", 0);
+            summary.put("avgSatisfaction", 0);
+            summary.put("textCount", 0);
+            summary.put("voiceCount", 0);
+            summary.put("daysWithData", 0);
+            return summary;
+        }
+        
+        int totalInteractions = 0;
+        int uniqueVisitors = 0;
+        long totalResponseTime = 0;
+        double totalSatisfaction = 0;
+        int satisfactionDays = 0;
+        int textCount = 0;
+        int voiceCount = 0;
+        
+        for (OperationStats stats : dailyStats)
+        {
+            totalInteractions += stats.getTotalInteractions() != null ? stats.getTotalInteractions() : 0;
+            uniqueVisitors += stats.getUniqueVisitors() != null ? stats.getUniqueVisitors() : 0;
+            
+            // 加权平均：总响应时间 = 平均值 × 当天交互次数
+            if (stats.getAvgResponseTimeMs() != null && stats.getTotalInteractions() != null)
+            {
+                totalResponseTime += (long) stats.getAvgResponseTimeMs() * stats.getTotalInteractions();
+            }
+            
+            // 加权平均：总满意度 = 平均值 × 当天交互次数
+            if (stats.getAvgSatisfaction() != null && stats.getTotalInteractions() != null)
+            {
+                totalSatisfaction += stats.getAvgSatisfaction().doubleValue() * stats.getTotalInteractions();
+                satisfactionDays += stats.getTotalInteractions();
+            }
+            
+            textCount += stats.getTextCount() != null ? stats.getTextCount() : 0;
+            voiceCount += stats.getVoiceCount() != null ? stats.getVoiceCount() : 0;
+        }
+        
+        // 计算加权平均值
+        double avgResponseTime = totalInteractions > 0 ? (double) totalResponseTime / totalInteractions : 0;
+        double avgSatisfaction = satisfactionDays > 0 ? totalSatisfaction / satisfactionDays : 0;
+        
+        summary.put("totalInteractions", totalInteractions);
+        summary.put("uniqueVisitors", uniqueVisitors);
+        summary.put("avgResponseTimeMs", Math.round(avgResponseTime));
+        summary.put("avgSatisfaction", Math.round(avgSatisfaction * 100.0) / 100.0);  // 保留两位小数
+        summary.put("textCount", textCount);
+        summary.put("voiceCount", voiceCount);
+        summary.put("daysWithData", dailyStats.size());
+        
+        return summary;
     }
 
     @Override
