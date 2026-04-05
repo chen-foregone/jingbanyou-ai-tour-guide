@@ -33,8 +33,6 @@ CREATE TABLE `manage_scenic_area` (
     `contact_phone` VARCHAR(20) COMMENT '联系电话',
     `official_website` VARCHAR(255) COMMENT '官方网站',
     `cover_image` VARCHAR(255) COMMENT '景区封面图',
-    `gps_latitude` DECIMAL(10,7) COMMENT 'GPS 纬度',
-    `gps_longitude` DECIMAL(10,7) COMMENT 'GPS 经度',
     `star_level` VARCHAR(10) COMMENT '景区等级 (如 5A、4A)',
     `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-启用',
     `sort` INT DEFAULT 0 COMMENT '排序权重',

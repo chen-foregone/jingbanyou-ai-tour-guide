@@ -47,12 +47,6 @@ public class ScenicAreaVO implements Serializable
     /** 景区封面图 */
     private String coverImage;
 
-    /** GPS 纬度 */
-    private BigDecimal gpsLatitude;
-
-    /** GPS 经度 */
-    private BigDecimal gpsLongitude;
-
     /** 景区等级 */
     private String starLevel;
 

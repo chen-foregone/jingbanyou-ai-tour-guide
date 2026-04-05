@@ -52,12 +52,6 @@ public class ScenicArea implements Serializable {
     /** 景区封面图 */
     private String coverImage;
 
-    /** GPS 纬度 */
-    private BigDecimal gpsLatitude;
-
-    /** GPS 经度 */
-    private BigDecimal gpsLongitude;
-
     /** 景区等级 (如 5A、4A) */
     private String starLevel;
 
