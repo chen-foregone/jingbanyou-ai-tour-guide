@@ -56,26 +56,11 @@ public class VisitorAnalysis implements Serializable {
     /** 满意度 (0-100) */
     private BigDecimal satisfactionRate;
 
-    /** 满意度趋势 rising/stable/falling */
-    private String satisfactionTrend;
-
-    /** 热门问题 TOP10(JSON) */
-    private String hotQuestions;
-
-    /** 投诉话题统计 JSON */
-    private String complaintTopics;
-
     /** 建议汇总 */
     private String suggestionSummary;
 
-    /** 服务优化建议 */
-    private String serviceSuggest;
-
     /** 是否 AI 生成报告 0-人工 1-AI */
     private Integer aiGenerated;
-
-    /** 报告文件地址 */
-    private String reportFile;
 
     /** 创建人 */
     private Long creator;
