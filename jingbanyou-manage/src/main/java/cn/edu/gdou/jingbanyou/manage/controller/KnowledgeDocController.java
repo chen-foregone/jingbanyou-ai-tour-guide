@@ -37,7 +37,7 @@ public class KnowledgeDocController extends BaseController
      * 获取知识库列表
      */
     @GetMapping("/list")
-    public TableDataInfo list(KnowledgeDoc doc)
+    public TableDataInfo list()
     {
         startPage();
         List<KnowledgeDoc> list = knowledgeDocService.list();

@@ -45,4 +45,4 @@ nbdist/
 !*/build/*.java
 !*/build/*.html
 !*/build/*.xml
-/docs/MANAGE_API_REFERENCE.md
+/docs/后台管理API接口文档.md
