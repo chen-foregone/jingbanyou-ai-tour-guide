@@ -228,6 +228,20 @@
                 <version>${spring-ai-alibaba.version}</version>
             </dependency>
 
+            <!-- Spring AI Alibaba Agent Framework (Graph/Agent) -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+            </dependency>
+
+            <!-- Spring AI Alibaba Graph Core -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-graph-core</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

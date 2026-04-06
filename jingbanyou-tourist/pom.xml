@@ -29,6 +29,12 @@
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
         </dependency>
 
+        <!--        Spring AI Graph        -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+        </dependency>
+
         <!-- WebSocket（实时交互） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
