@@ -1,14 +1,17 @@
 package cn.edu.gdou.jingbanyou.manage.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 个性化游览路线实体对象
@@ -18,7 +21,7 @@ import java.util.Date;
  */
 @Data
 @ToString
-@TableName("manage_tour_route")
+@TableName(value = "manage_tour_route", autoResultMap = true)
 public class TourRoute implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -47,6 +50,10 @@ public class TourRoute implements Serializable {
 
     /** 路线介绍 */
     private String routeDesc;
+
+    /** 路线标签数组，如 ["首次来访","轻徒步","观景核心线"]，前端卡片直接展示 */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<String> routeTags;
 
     /** 适宜人群 */
     private String suitableCrowd;
