@@ -9,11 +9,5 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class GraphConfiguration{
 
-    @Bean
-    public CompiledGraph compileGraph() throws GraphStateException {
-        StateGraph stateGraph = new StateGraph();
-        CompiledGraph compile = stateGraph.compile();
-        return compile;
-    }
+
 }
-5
