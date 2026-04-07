@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.ToString;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
 /**
@@ -33,20 +34,50 @@ public class DigitalHumanConfig implements Serializable  {
     /** 数字人名称 */
     private String humanName;
 
-    /** 外观配置 (2D驱动参数JSON，如模型选择、增强开关等) */
-    private String appearanceConfig;
-
-    /** 语音合成参数 (JSON) */
-    private String voiceConfig;
-
-    /** 口型同步 0-关闭 1-开启 */
-    private Integer lipSync;
+    /** 人物头像图片地址 */
+    private String avatarImage;
 
     /** 默认问候语 */
     private String defaultGreeting;
 
-    /** 人物图片地址（2D驱动源图） */
-    private String avatarImage;
+    /** Live2D 模型 .model3.json 可访问地址（前端加载模型必须） */
+    private String modelJsonUrl;
+
+    /** 横屏模型显示高度 */
+    private BigDecimal landscapeHeight;
+
+    /** 竖屏模型显示高度 */
+    private BigDecimal portraitHeight;
+
+    /** X 方向缩放 */
+    private BigDecimal scaleX;
+
+    /** X 方向偏移 */
+    private BigDecimal offsetX;
+
+    /** Y 方向偏移 */
+    private BigDecimal offsetY;
+
+    /** 空闲动作组名 */
+    private String idleMotionGroup;
+
+    /** 点击动作组名 */
+    private String tapMotionGroup;
+
+    /** TTS 音色代码 */
+    private String ttsVoiceCode;
+
+    /** 音色试听音频地址 */
+    private String sampleAudioUrl;
+
+    /** 外观扩展配置 (JSON) */
+    private String appearanceConfig;
+
+    /** 语音合成扩展参数 (JSON) */
+    private String voiceConfig;
+
+    /** 口型同步 0-关闭 1-开启 */
+    private Integer lipSync;
 
     /** 是否默认 0-否 1-是 */
     private Integer isDefault;
