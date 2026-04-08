@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 景区信息返回 VO
@@ -47,6 +47,12 @@ public class ScenicAreaVO implements Serializable
     /** 景区封面图 */
     private String coverImage;
 
+    /** 首屏功能亮点文案数组 */
+    private List<String> topFeatures;
+
+    /** 快捷提问文案数组 */
+    private List<String> quickPrompts;
+
     /** 景区等级 */
     private String starLevel;
 
@@ -57,3 +63,4 @@ public class ScenicAreaVO implements Serializable
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
 }
+

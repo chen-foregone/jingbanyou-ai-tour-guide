@@ -204,21 +204,6 @@ public enum GraphStateKey {
     }
 
     /**
-     * 根据 key 字符串查找枚举
-     * 
-     * @param key key 字符串
-     * @return 对应的枚举，未找到返回 null
-     */
-    public static GraphStateKey fromKey(String key) {
-        for (GraphStateKey stateKey : values()) {
-            if (stateKey.key.equals(key)) {
-                return stateKey;
-            }
-        }
-        return null;
-    }
-    
-    /**
      * 验证值是否符合预期类型
      * 
      * @param value 要验证的值

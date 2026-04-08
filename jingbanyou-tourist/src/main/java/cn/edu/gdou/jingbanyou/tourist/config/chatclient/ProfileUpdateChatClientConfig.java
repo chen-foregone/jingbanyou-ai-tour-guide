@@ -12,6 +12,7 @@ import org.springframework.context.annotation.PropertySource;
 /**
  * 画像更新节点 ChatClient 配置（轻量模型，仅提取兴趣标签）
  */
+@Data
 @Configuration
 @PropertySource("classpath:chatclient/profile-update.properties")
 @ConfigurationProperties(prefix = "jingbanyou.ai.profile-update")

@@ -12,8 +12,9 @@ import java.util.Map;
 /**
  * 参数缺失引导节点
  * 任务：用自然、友好的语气引导游客补充缺失的路线参数
+ * 注意：暂时禁用，等待配置完善后启用
  */
-@Component
+// @Component  // TODO: 添加 jingbanyou.ai.missing-param-guide 配置后启用
 public class MissingParamGuideNode implements NodeAction {
 
     private final ChatClient chatClient;

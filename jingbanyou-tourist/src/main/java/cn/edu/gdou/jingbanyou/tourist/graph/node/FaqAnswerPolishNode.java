@@ -12,8 +12,9 @@ import java.util.Map;
 /**
  * FAQ 润色节点（高频问题答案优化）
  * 任务：把 FAQ 库的固定标准答案，润色得更亲切、更符合 AI 数字人语气
+ * 注意：暂时禁用，等待配置完善后启用
  */
-@Component
+// @Component  // TODO: 添加 jingbanyou.ai.faq-polish 配置后启用
 public class FaqAnswerPolishNode implements NodeAction {
 
     private final ChatClient chatClient;

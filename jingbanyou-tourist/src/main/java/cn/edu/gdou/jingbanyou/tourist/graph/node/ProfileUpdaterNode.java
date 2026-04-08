@@ -1,7 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
 import cn.edu.gdou.jingbanyou.tourist.graph.constant.GraphStateKey;
-import cn.edu.gdou.jingbanyou.tourist.graph.model.VisitorProfile;
+import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,9 +28,10 @@ import java.util.concurrent.TimeUnit;
  *   3. 累加已访问景点（最多 20 个）
  *   4. turnCount++
  *   5. 写回 OverAllState，异步写 Redis（TTL 24h）
+ * 注意：暂时禁用，等待配置完善后启用
  */
 @Slf4j
-@Component
+// @Component  // TODO: 添加 jingbanyou.ai.profile-update 配置后启用
 public class ProfileUpdaterNode implements NodeAction {
 
     private static final String REDIS_KEY_PREFIX = "visitor:profile:";

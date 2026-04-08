@@ -12,6 +12,7 @@ import org.springframework.context.annotation.PropertySource;
 /**
  * 路线参数提取节点 ChatClient 配置
  */
+@Data
 @Configuration
 @PropertySource("classpath:chatclient/route-param-extractor.properties")
 @ConfigurationProperties(prefix = "jingbanyou.ai.route-param-extractor")

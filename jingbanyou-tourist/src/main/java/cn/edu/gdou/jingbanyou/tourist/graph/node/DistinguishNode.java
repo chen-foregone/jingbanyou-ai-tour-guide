@@ -27,49 +27,9 @@ public class DistinguishNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        // 1. 从 state 中获取用户问题和历史对话
-        String question = state.value(GraphStateKey.QUESTION.getKey(), String.class)
-                .orElseThrow(() -> new IllegalArgumentException("用户问题不能为空"));
-        
-        String history = state.value(GraphStateKey.HISTORY.getKey(), String.class)
-                .orElse("");  // 历史对话可选，默认为空
-        
-        log.info("开始意图识别 - 问题: {}", question);
-        
-        // 2. 调用 ChatClient 进行意图分类
-        String classification = chatClient.prompt()
-                .user(userSpec -> userSpec
-                        .text("{history}\n\n{question}")
-                        .param("history", history.isEmpty() ? "无历史对话" : history)
-                        .param("question", question)
-                )
-                .call()
-                .content();
-        
-        // 3. 解析分类结果（去除可能的空白字符）
-        String intent = classification != null ? classification.trim().toLowerCase() : "complex_other";
-        
-        // 验证分类结果是否有效
-        if (!isValidIntent(intent)) {
-            log.warn("无效的分类结果: {}, 使用默认值 complex_other", intent);
-            intent = "complex_other";
-        }
-        
-        log.info("意图识别完成 - 分类结果: {}", intent);
-        
-        // 4. 将结果存入 state
-        Map<String, Object> result = new HashMap<>();
-        result.put(GraphStateKey.INTENT.getKey(), intent);
-        
-        return result;
+        //1.获取用户输入
+        String question = state.value(GraphStateKey.QUESTION.getKey(), String.class).orElse("");
+        return null;
     }
-    
-    /**
-     * 验证意图分类是否有效
-     */
-    private boolean isValidIntent(String intent) {
-        return "route_plan".equals(intent) 
-            || "spot_question".equals(intent) 
-            || "complex_other".equals(intent);
-    }
+
 }

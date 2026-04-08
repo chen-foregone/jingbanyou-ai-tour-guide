@@ -11,6 +11,7 @@ import org.springframework.context.annotation.PropertySource;
 /**
  * 参数缺失引导节点 ChatClient 配置
  */
+@Data
 @Configuration
 @PropertySource("classpath:chatclient/missing-param-guide.properties")
 @ConfigurationProperties(prefix = "jingbanyou.ai.missing-param-guide")

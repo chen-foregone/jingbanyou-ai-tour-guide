@@ -1,11 +1,13 @@
 package cn.edu.gdou.jingbanyou.manage.controller;
 
 import cn.edu.gdou.jingbanyou.common.annotation.Log;
+import cn.hutool.core.bean.BeanUtil;
 import org.springframework.security.access.prepost.PreAuthorize;
 import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.common.core.page.TableDataInfo;
 import cn.edu.gdou.jingbanyou.common.enums.BusinessType;
+import cn.edu.gdou.jingbanyou.manage.dto.ScenicAreaVO;
 import cn.edu.gdou.jingbanyou.manage.entity.ScenicArea;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import jakarta.validation.Valid;
@@ -37,7 +39,8 @@ public class ScenicAreaController extends BaseController
     {
         startPage();
         List<ScenicArea> list = scenicAreaService.list();
-        return getDataTable(list);
+        List<ScenicAreaVO> voList = BeanUtil.copyToList(list, ScenicAreaVO.class);
+        return getDataTable(voList);
     }
 
     /**
@@ -46,7 +49,8 @@ public class ScenicAreaController extends BaseController
     @GetMapping("/{id}")
     public AjaxResult getInfo(@PathVariable Long id)
     {
-        return success(scenicAreaService.getById(id));
+        ScenicArea area = scenicAreaService.getById(id);
+        return success(BeanUtil.copyProperties(area, ScenicAreaVO.class));
     }
 
     /**

@@ -3,16 +3,17 @@ package cn.edu.gdou.jingbanyou.tourist.config.chatclient;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 
 /**
  * FAQ 润色节点 ChatClient 配置
  */
+@Data
 @Configuration
-@PropertySource("classpath:chatclient/faq-polish.properties")
+@ConditionalOnProperty(prefix = "jingbanyou.ai.faq-polish", name = "model.name")
 @ConfigurationProperties(prefix = "jingbanyou.ai.faq-polish")
 public class FaqPolishChatClientConfig {
 
@@ -21,6 +22,10 @@ public class FaqPolishChatClientConfig {
 
     @Bean("faqPolishChatClient")
     public ChatClient chatClient(ChatClient.Builder builder) {
+        if (model == null) {
+            throw new IllegalStateException("FAQ Polish ChatClient 配置未加载");
+        }
+        
         DashScopeChatOptions options = DashScopeChatOptions.builder()
                 .withModel(model.getName())
                 .withTemperature(model.getTemperature())

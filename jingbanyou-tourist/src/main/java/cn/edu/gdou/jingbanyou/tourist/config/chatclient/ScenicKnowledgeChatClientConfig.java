@@ -11,6 +11,7 @@ import org.springframework.context.annotation.PropertySource;
 /**
  * 景区知识问答生成节点 ChatClient 配置
  */
+@Data
 @Configuration
 @PropertySource("classpath:chatclient/scenic-knowledge.properties")
 @ConfigurationProperties(prefix = "jingbanyou.ai.scenic-knowledge")

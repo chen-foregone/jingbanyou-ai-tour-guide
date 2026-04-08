@@ -11,6 +11,7 @@ import org.springframework.context.annotation.PropertySource;
 /**
  * 地图路线 API 调用节点 ChatClient 配置
  */
+@Data
 @Configuration
 @PropertySource("classpath:chatclient/map-route-invoker.properties")
 @ConfigurationProperties(prefix = "jingbanyou.ai.map-route-invoker")

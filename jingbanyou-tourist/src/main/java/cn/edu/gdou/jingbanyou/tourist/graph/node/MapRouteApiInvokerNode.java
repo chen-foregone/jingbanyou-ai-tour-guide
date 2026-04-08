@@ -12,8 +12,9 @@ import java.util.Map;
 /**
  * 路线润色节点（导航话术生成）
  * 任务：把结构化路线数据（经纬度、距离、时间）转换成自然、友好、游客易懂的导航话术
+ * 注意：暂时禁用，等待配置完善后启用
  */
-@Component
+// @Component  // TODO: 添加 jingbanyou.ai.map-route-invoker 配置后启用
 public class MapRouteApiInvokerNode implements NodeAction {
 
     private final ChatClient chatClient;

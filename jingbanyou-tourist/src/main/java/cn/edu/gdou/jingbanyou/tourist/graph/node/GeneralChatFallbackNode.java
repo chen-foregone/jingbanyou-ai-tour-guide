@@ -12,8 +12,9 @@ import java.util.Map;
 /**
  * 闲聊兜底节点（非景区问题 / 投诉处理）
  * 任务：处理游客的闲聊、投诉、天气等非景区问题，要求语气友好、响应快
+ * 注意：暂时禁用，等待配置完善后启用
  */
-@Component
+// @Component  // TODO: 添加 jingbanyou.ai.general-chat 配置后启用
 public class GeneralChatFallbackNode implements NodeAction {
 
     private final ChatClient chatClient;

@@ -1,7 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
 import cn.edu.gdou.jingbanyou.tourist.graph.constant.GraphStateKey;
-import cn.edu.gdou.jingbanyou.tourist.graph.model.VisitorProfile;
+import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.databind.ObjectMapper;

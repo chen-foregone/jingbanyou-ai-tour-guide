@@ -12,8 +12,9 @@ import java.util.Map;
 /**
  * 参数提取节点（路线规划用）
  * 任务：从用户问题里提取「起点、终点」，结构化输出，要求精准、无遗漏
+ * 注意：暂时禁用，等待配置完善后启用
  */
-@Component
+// @Component  // TODO: 添加 jingbanyou.ai.route-param-extractor 配置后启用
 public class RouteParamExtractorNode implements NodeAction {
 
     private final ChatClient chatClient;

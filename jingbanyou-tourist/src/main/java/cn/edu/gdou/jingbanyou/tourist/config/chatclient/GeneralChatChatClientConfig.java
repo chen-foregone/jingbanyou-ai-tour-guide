@@ -11,6 +11,7 @@ import org.springframework.context.annotation.PropertySource;
 /**
  * 闲聊兜底节点 ChatClient 配置
  */
+@Data
 @Configuration
 @PropertySource("classpath:chatclient/general-chat.properties")
 @ConfigurationProperties(prefix = "jingbanyou.ai.general-chat")

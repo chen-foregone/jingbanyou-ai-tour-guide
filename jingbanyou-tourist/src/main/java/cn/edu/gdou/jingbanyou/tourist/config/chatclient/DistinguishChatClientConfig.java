@@ -7,21 +7,43 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 
 /**
  * 意图分类节点 ChatClient 配置
+ * 从 application.yml 中读取 jingbanyou.ai.distinguish 配置
  */
 @Configuration
-@PropertySource("classpath:chatclient/distinguish.properties")
 @ConfigurationProperties(prefix = "jingbanyou.ai.distinguish")
 public class DistinguishChatClientConfig {
 
     private String prompt;
     private ModelConfig model;
 
+    public String getPrompt() {
+        return prompt;
+    }
+
+    public void setPrompt(String prompt) {
+        this.prompt = prompt;
+    }
+
+    public ModelConfig getModel() {
+        return model;
+    }
+
+    public void setModel(ModelConfig model) {
+        this.model = model;
+    }
+
     @Bean("distinguishChatClient")
     public ChatClient chatClient(ChatClient.Builder builder) {
+        // 验证配置是否加载
+        if (model == null) {
+            throw new IllegalStateException(
+                "DistinguishChatClient 配置未正确加载！请检查 application.yml 中的 jingbanyou.ai.distinguish 配置"
+            );
+        }
+        
         DashScopeChatOptions options;
         if ("JSON_OBJECT".equals(model.getResponseFormat())) {
             options = DashScopeChatOptions.builder()
