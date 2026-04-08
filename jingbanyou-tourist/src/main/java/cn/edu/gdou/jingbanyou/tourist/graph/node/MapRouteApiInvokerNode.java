@@ -1,5 +1,6 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
+import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
@@ -25,7 +26,17 @@ public class MapRouteApiInvokerNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        // TODO: 实现地图路线API调用逻辑
-        return new HashMap<>();
+        //1.获得起点和终点
+        String start = state.value(GraphStateKey.ROUTE_START, String.class).orElse("");
+        String end = state.value(GraphStateKey.ROUTE_END, String.class).orElse("");
+        String routes = "";
+        //2.调用模型
+        while (routes.isEmpty()) {
+            routes = chatClient.prompt()
+                    .user(userSpec -> userSpec.params(Map.of(GraphStateKey.ROUTE_START, start, GraphStateKey.ROUTE_END, end)))
+                    .call()
+                    .content();
+        }
+        return state.updateState(Map.of(GraphStateKey.ROUTE_DATA, routes));
     }
 }

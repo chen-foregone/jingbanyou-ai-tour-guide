@@ -74,6 +74,13 @@ spring:
         enabled: true
         options:
           model: text-embedding-v2
+      mcp:
+        client:
+          stdio:
+            servers-configuration: classpath:/mcp-servers-config.json # 指定 MCP 服务的配置文件路径
+          toolcallback:
+            enabled: true # 开启 MCP 客户端的工具回调（Tool Callback）功能
+
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
@@ -120,34 +127,6 @@ token:
   secret: abcdefghijklmnopqrstuvwxyz
   # 令牌有效期（默认30分钟）
   expireTime: 30
-
-# AI节点配置（意图识别、路线规划、知识问答等）
-jingbanyou:
-  ai:
-    distinguish:
-      prompt: |
-        你是一个景区智能导游助手的意图分类器。
-        
-        请根据游客的问题，结合历史对话上下文，将其分类为以下三类之一：
-        
-        - route_plan：游客想要规划游览路线，包含"怎么走""路线""从A到B""导航"等意图
-        - spot_question：游客询问景区内具体景点、自然景观、动植物、历史背景、开放时间、门票等信息
-        - complex_other：闲聊、投诉、建议、与景区无关的问题，或无法归入前两类的问题
-        
-        历史对话（最近3轮）：
-        {history}
-        
-        当前游客问题：
-        {question}
-        
-        请只输出分类标签，不要输出任何解释：
-        route_plan 或 spot_question 或 complex_other
-      model:
-        name: qwen3.5-flash
-        temperature: 0.1
-        topP: 0.8
-        maxTokens: 32
-        responseFormat: JSON_OBJECT
 
 # MyBatis配置
 mybatis:

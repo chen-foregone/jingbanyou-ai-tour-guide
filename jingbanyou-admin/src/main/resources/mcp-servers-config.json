@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "amap-maps": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@amap/amap-maps-mcp-server"
+      ],
+      "env": {
+        "AMAP_MAPS_API_KEY": "c0ffbe908a6e014e99335e489ca2095a"
+      }
+    }
+  }
+}
