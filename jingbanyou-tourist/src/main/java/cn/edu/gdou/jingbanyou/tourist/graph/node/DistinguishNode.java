@@ -29,13 +29,17 @@ public class DistinguishNode implements NodeAction {
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
         //1.获取用户输入
-        String question = state.value(GraphStateKey.QUESTION.getKey(), String.class).orElse("");
+        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
         //2.调用模型识别意图
-        String intentJSON = chatClient.prompt(question).call().content();
+        String intentJSON = chatClient
+                .prompt()
+                .user(userSpect -> userSpect.params(Map.of(GraphStateKey.QUESTION,question)))
+                .call()
+                .content();
         //3.提取意图
-        String intent = objectMapper.readTree(intentJSON).get("intent").asText();
+        String intent = objectMapper.readTree(intentJSON).get(GraphStateKey.INTENT).asText();
         //4.返回结果
-        return state.updateState(Map.of(GraphStateKey.INTENT.getKey(), intent));
+        return state.updateState(Map.of(GraphStateKey.INTENT, intent));
     }
 
 }
