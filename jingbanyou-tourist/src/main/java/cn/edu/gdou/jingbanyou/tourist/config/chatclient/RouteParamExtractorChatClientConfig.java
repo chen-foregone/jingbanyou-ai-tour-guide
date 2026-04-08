@@ -14,7 +14,7 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Data
 @Configuration
-@PropertySource("classpath:chatclient/route-param-extractor.properties")
+@PropertySource(value = "classpath:chatclient/route-param-extractor.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.route-param-extractor")
 public class RouteParamExtractorChatClientConfig {
 

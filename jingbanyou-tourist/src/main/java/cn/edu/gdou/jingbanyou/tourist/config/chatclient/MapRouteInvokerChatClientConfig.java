@@ -13,7 +13,7 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Data
 @Configuration
-@PropertySource("classpath:chatclient/map-route-invoker.properties")
+@PropertySource(value = "classpath:chatclient/map-route-invoker.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.map-route-invoker")
 public class MapRouteInvokerChatClientConfig {
 

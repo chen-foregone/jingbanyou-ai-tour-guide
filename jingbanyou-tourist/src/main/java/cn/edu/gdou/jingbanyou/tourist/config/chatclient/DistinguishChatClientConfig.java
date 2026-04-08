@@ -7,12 +7,13 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 /**
  * 意图分类节点 ChatClient 配置
- * 从 application.yml 中读取 jingbanyou.ai.distinguish 配置
  */
 @Configuration
+@PropertySource(value = "classpath:chatclient/distinguish.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.distinguish")
 public class DistinguishChatClientConfig {
 

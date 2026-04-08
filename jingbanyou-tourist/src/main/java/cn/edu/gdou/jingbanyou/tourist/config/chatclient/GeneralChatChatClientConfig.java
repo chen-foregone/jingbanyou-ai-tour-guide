@@ -13,7 +13,7 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Data
 @Configuration
-@PropertySource("classpath:chatclient/general-chat.properties")
+@PropertySource(value = "classpath:chatclient/general-chat.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.general-chat")
 public class GeneralChatChatClientConfig {
 

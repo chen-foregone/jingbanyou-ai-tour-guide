@@ -1,0 +1,20 @@
+jingbanyou:
+  ai:
+    map-route-invoker:
+      prompt: |
+        你是一个专业的景区导航助手。
+
+        请根据以下路线数据，生成自然流畅的导航话术。
+
+        要求：
+        - 路线描述自然流畅，结合景区特色适当加入1句景色描述
+        - 重要转弯或标志物要清晰说明
+        - 不超过150字
+
+        路线数据：
+        {route_data}
+      model:
+        name: qwen3.6-plus
+        temperature: 0.7
+        topP: 0.9
+        maxTokens: 512

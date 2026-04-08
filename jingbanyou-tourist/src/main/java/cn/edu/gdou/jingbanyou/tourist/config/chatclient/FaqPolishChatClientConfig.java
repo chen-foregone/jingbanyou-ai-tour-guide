@@ -3,17 +3,17 @@ package cn.edu.gdou.jingbanyou.tourist.config.chatclient;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 /**
  * FAQ 润色节点 ChatClient 配置
  */
 @Data
 @Configuration
-@ConditionalOnProperty(prefix = "jingbanyou.ai.faq-polish", name = "model.name")
+@PropertySource(value = "classpath:chatclient/faq-polish.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.faq-polish")
 public class FaqPolishChatClientConfig {
 

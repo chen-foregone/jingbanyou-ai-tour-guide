@@ -1,10 +1,10 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
+import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +25,14 @@ public class GeneralChatFallbackNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        // TODO: 实现通用聊天回退逻辑
-        return new HashMap<>();
+        String answer = "";
+        //1. 获取用户问题
+        String question = state.value(GraphStateKey.QUESTION.getKey(), String.class).orElse("");
+        //2. 调用模型回答问题
+        while (answer == null || answer.isEmpty()) {
+            answer = chatClient.prompt(question).call().content();
+        }
+        //3. 直接返回结果
+        return state.updateState(Map.of(GraphStateKey.ANSWER.getKey(), answer));
     }
 }

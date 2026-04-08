@@ -14,7 +14,7 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Data
 @Configuration
-@PropertySource("classpath:chatclient/profile-update.properties")
+@PropertySource(value = "classpath:chatclient/profile-update.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.profile-update")
 public class ProfileUpdateChatClientConfig {
 

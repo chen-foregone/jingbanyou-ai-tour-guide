@@ -1,7 +1,5 @@
 package cn.edu.gdou.jingbanyou.tourist.constant;
 
-import lombok.Getter;
-
 /**
  * Graph State Key 枚举
  * 统一管理 Spring AI Graph 中 OverAllState 的所有键名
@@ -20,7 +18,6 @@ import lombok.Getter;
  * @author JingbanYou Team
  * @date 2026-04-07
  */
-@Getter
 public enum GraphStateKey {
     
     // ==================== 输入相关 ====================
@@ -177,24 +174,27 @@ public enum GraphStateKey {
      * 消耗的 Token 数量
      * 类型：Integer
      */
-    TOKENS_USED("tokensUsed", Integer.class, "消耗的Token数");
-    
-    // ==================== 枚举属性 ====================
+    TOKENS_USED("tokensUsed", Integer.class, "消耗的Token数"),
+
+    // ==================== 用户画像相关 ====================
 
     /**
-     * -- GETTER --
-     *  获取 State Key 字符串
+     * 游客唯一标识，由前端 WebSocket/HTTP 传入
+     * 类型：String
      */
+    VISITOR_ID("visitorId", String.class, "游客唯一标识"),
+
+    /**
+     * 游客画像（压缩 JSON，< 200 Token）
+     * 类型：VisitorProfile
+     * 来源：ProfileLoaderNode 初始化，ProfileUpdaterNode 更新
+     */
+    VISITOR_PROFILE("visitorProfile", Object.class, "游客画像");
+    
+    // ==================== 枚举属性 ====================
+    
     private final String key;
-    /**
-     * -- GETTER --
-     *  获取预期的数据类型
-     */
     private final Class<?> type;
-    /**
-     * -- GETTER --
-     *  获取描述信息
-     */
     private final String description;
     
     GraphStateKey(String key, Class<?> type, String description) {
@@ -202,17 +202,25 @@ public enum GraphStateKey {
         this.type = type;
         this.description = description;
     }
-
+    
     /**
-     * 验证值是否符合预期类型
-     * 
-     * @param value 要验证的值
-     * @return 是否类型匹配
+     * 获取 State Key 字符串
      */
-    public boolean isTypeMatch(Object value) {
-        if (value == null) {
-            return true; // null 值认为匹配任何类型
-        }
-        return type.isInstance(value);
+    public String getKey() {
+        return key;
+    }
+    
+    /**
+     * 获取预期的数据类型（用于文档说明，实际使用时 OverAllState 为弱类型）
+     */
+    public Class<?> getType() {
+        return type;
+    }
+    
+    /**
+     * 获取描述信息
+     */
+    public String getDescription() {
+        return description;
     }
 }

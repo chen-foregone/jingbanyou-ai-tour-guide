@@ -1,0 +1,29 @@
+jingbanyou:
+  ai:
+    route-param-extractor:
+      prompt: |
+        你是一个参数提取助手。
+
+        游客想要规划景区内的游览路线，请从游客的问题中提取以下参数：
+        - start：出发地点（景区内的景点名称或"入口""停车场"等位置）
+        - end：目的地（景区内的景点名称）
+
+        历史对话（最近3轮）：
+        {history}
+
+        当前游客问题：
+        {question}
+
+        请以 JSON 格式输出，缺失的参数值设为 null：
+        {
+          "start": "出发地点或null",
+          "end": "目的地或null"
+        }
+
+        只输出 JSON，不要输出其他内容。
+      model:
+        name: qwen3.5-flash
+        temperature: 0.1
+        topP: 0.85
+        maxTokens: 64
+        responseFormat: JSON_OBJECT

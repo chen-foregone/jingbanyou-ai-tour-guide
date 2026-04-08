@@ -1,0 +1,12 @@
+jingbanyou:
+  ai:
+    profile-update:
+      prompt: |
+        从游客的一轮对话中提取兴趣标签，输出纯JSON数组，最多3个标签，无其他文字。
+        例如：["历史","宗教文化"]
+      model:
+        name: qwen-turbo
+        temperature: 0.0
+        topP: 1.0
+        maxTokens: 50
+        responseFormat: JSON_OBJECT

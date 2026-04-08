@@ -13,7 +13,7 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Data
 @Configuration
-@PropertySource("classpath:chatclient/scenic-knowledge.properties")
+@PropertySource(value = "classpath:chatclient/scenic-knowledge.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.scenic-knowledge")
 public class ScenicKnowledgeChatClientConfig {
 

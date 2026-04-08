@@ -13,7 +13,7 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Data
 @Configuration
-@PropertySource("classpath:chatclient/missing-param-guide.properties")
+@PropertySource(value = "classpath:chatclient/missing-param-guide.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.missing-param-guide")
 public class MissingParamGuideChatClientConfig {
 
