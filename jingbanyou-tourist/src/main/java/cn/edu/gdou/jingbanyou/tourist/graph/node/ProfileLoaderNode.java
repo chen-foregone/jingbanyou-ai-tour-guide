@@ -31,7 +31,7 @@ public class ProfileLoaderNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        String visitorId = state.value(GraphStateKey.VISITOR_ID.getKey(), String.class)
+        String visitorId = state.value(GraphStateKey.VISITOR_ID, String.class)
                 .orElse(null);
 
         VisitorProfile profile;
@@ -52,7 +52,7 @@ public class ProfileLoaderNode implements NodeAction {
         }
 
         Map<String, Object> result = new HashMap<>();
-        result.put(GraphStateKey.VISITOR_PROFILE.getKey(), profile);
+        result.put(GraphStateKey.VISITOR_PROFILE, profile);
         return result;
     }
 }

@@ -1,7 +1,10 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
+import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.alibaba.druid.support.json.JSONUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -25,7 +28,19 @@ public class RouteParamExtractorNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        //对用户
-        return new HashMap<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        //对用户的路径参数进行提取
+        String question = state.value(GraphStateKey.QUESTION,String.class).orElse("");
+        String questionJson = JSONUtils.toJSONString(question);
+        Map map = objectMapper.readValue(questionJson, Map.class);
+        //起点
+        String routeStart = map.get(GraphStateKey.ROUTE_START).toString();
+        //终点
+        String routeEnd = map.get(GraphStateKey.ROUTE_END).toString();
+        //判断起始点是否为空
+        if (routeStart == null || routeStart.isEmpty() || routeEnd == null || routeEnd.isEmpty()) {
+            return state.updateState(Map.of(GraphStateKey.ROUTE_PARAMS_EXIST, false));
+        }
+        return state.updateState(Map.of(GraphStateKey.ROUTE_PARAMS_EXIST, true, GraphStateKey.ROUTE_START, routeStart, GraphStateKey.ROUTE_END, routeEnd));
     }
 }

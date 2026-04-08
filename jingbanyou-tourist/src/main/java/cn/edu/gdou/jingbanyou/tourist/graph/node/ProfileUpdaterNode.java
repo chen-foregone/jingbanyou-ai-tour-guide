@@ -52,13 +52,13 @@ public class ProfileUpdaterNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        VisitorProfile profile = state.value(GraphStateKey.VISITOR_PROFILE.getKey(), VisitorProfile.class)
+        VisitorProfile profile = state.value(GraphStateKey.VISITOR_PROFILE, VisitorProfile.class)
                 .orElse(new VisitorProfile());
 
-        String question = state.value(GraphStateKey.QUESTION.getKey(), String.class).orElse("");
-        String answer = state.value(GraphStateKey.ANSWER.getKey(), String.class)
-                .or(() -> state.value(GraphStateKey.CHAT_RESPONSE.getKey(), String.class))
-                .or(() -> state.value(GraphStateKey.ROUTE_DESCRIPTION.getKey(), String.class))
+        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
+        String answer = state.value(GraphStateKey.ANSWER, String.class)
+                .or(() -> state.value(GraphStateKey.CHAT_RESPONSE, String.class))
+                .or(() -> state.value(GraphStateKey.ROUTE_DESCRIPTION, String.class))
                 .orElse("");
 
         // 1. 调用轻量模型提取本轮兴趣标签
@@ -75,7 +75,7 @@ public class ProfileUpdaterNode implements NodeAction {
 
         // 4. 写回 OverAllState
         Map<String, Object> result = new HashMap<>();
-        result.put(GraphStateKey.VISITOR_PROFILE.getKey(), profile);
+        result.put(GraphStateKey.VISITOR_PROFILE, profile);
 
         // 5. 异步写 Redis
         asyncSaveToRedis(profile);

@@ -27,12 +27,12 @@ public class GeneralChatFallbackNode implements NodeAction {
     public Map<String, Object> apply(OverAllState state) throws Exception {
         String answer = "";
         //1. 获取用户问题
-        String question = state.value(GraphStateKey.QUESTION.getKey(), String.class).orElse("");
+        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
         //2. 调用模型回答问题
         while (answer == null || answer.isEmpty()) {
             answer = chatClient.prompt(question).call().content();
         }
         //3. 直接返回结果
-        return state.updateState(Map.of(GraphStateKey.ANSWER.getKey(), answer));
+        return state.updateState(Map.of(GraphStateKey.ANSWER, answer));
     }
 }
