@@ -10,12 +10,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * 知识库文档 Service 实现类
@@ -24,56 +25,78 @@ import java.util.List;
  */
 @Slf4j
 @Service
-public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, KnowledgeDoc> implements IKnowledgeDocService
-{
+public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, KnowledgeDoc> implements IKnowledgeDocService {
+
     @Autowired
     private KnowledgeChunkMapper knowledgeChunkMapper;
 
+    @Autowired
+    private VectorStore knowledgeVectorStore;
+
+    /** Embedding 模型版本（从配置读取） */
+    @Value("${spring.ai.dashscope.embedding.options.model:text-embedding-v2}")
+    private String embeddingModel;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void vectorizeDoc(Long docId)
-    {
+    public void vectorizeDoc(Long docId) {
         KnowledgeDoc doc = getById(docId);
-        if (doc == null)
-        {
+        if (doc == null) {
             throw new RuntimeException("文档不存在: " + docId);
         }
-        if (doc.getDocContent() == null || doc.getDocContent().isEmpty())
-        {
+        if (doc.getDocContent() == null || doc.getDocContent().isBlank()) {
             throw new RuntimeException("文档内容为空: " + docId);
         }
 
-        log.info("开始切分文档: id={}, title={}", docId, doc.getDocTitle());
+        log.info("开始向量化文档: id={}, title={}", docId, doc.getDocTitle());
 
-        // 删除旧的chunk记录
+        // 删除旧的 chunk 记录（同步清除 Redis 中的向量）
         knowledgeChunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>()
                 .eq(KnowledgeChunk::getDocId, docId));
 
-        // 使用Spring AI的TokenTextSplitter切分文档
+        // 使用 Spring AI 的 TokenTextSplitter 切分文档
         TokenTextSplitter splitter = new TokenTextSplitter();
-        Document document = new Document(doc.getDocContent());
-        List<Document> splitDocs = splitter.split(document);
+        Document sourceDoc = new Document(doc.getDocContent());
+        List<Document> splitDocs = splitter.split(sourceDoc);
 
-        // 保存chunk记录
-        for (int i = 0; i < splitDocs.size(); i++)
-        {
-            String text = splitDocs.get(i).getText();
+        // 逐条写入 Redis 向量库并保存 chunk 记录
+        for (int i = 0; i < splitDocs.size(); i++) {
+            Document splitDoc = splitDocs.get(i);
+            String text = splitDoc.getText();
+
+            // 构建元数据（供检索时过滤使用）
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("docId", docId);
+            metadata.put("scenicId", doc.getScenicId());
+            metadata.put("docTitle", doc.getDocTitle());
+            metadata.put("chunkIndex", i);
+            splitDoc.getMetadata().putAll(metadata);
+
+            // 写入 Redis 向量库，返回的 Document 包含 vectorId
+            knowledgeVectorStore.add(List.of(splitDoc));
+
+            // 保存 chunk 记录
             KnowledgeChunk chunk = new KnowledgeChunk();
             chunk.setDocId(docId);
             chunk.setChunkIndex(i);
             chunk.setChunkContent(text);
             chunk.setChunkTokens(text.length() / 2);
+            chunk.setVectorId(splitDoc.getId());
+            chunk.setEmbeddingVersion(embeddingModel);
             chunk.setCreateTime(new Date());
             knowledgeChunkMapper.insert(chunk);
+
+            log.debug("Chunk {} 写入完成: vectorId={}", i, splitDoc.getId());
         }
 
         // 更新文档状态
         doc.setChunkCount(splitDocs.size());
         doc.setVectorized(1);
+        doc.setEmbeddingModel(embeddingModel);
         doc.setUpdateTime(new Date());
         updateById(doc);
 
-        log.info("文档切分完成: id={}, chunks={}", docId, splitDocs.size());
+        log.info("文档向量化完成: id={}, chunks={}", docId, splitDocs.size());
     }
 
     @Override
