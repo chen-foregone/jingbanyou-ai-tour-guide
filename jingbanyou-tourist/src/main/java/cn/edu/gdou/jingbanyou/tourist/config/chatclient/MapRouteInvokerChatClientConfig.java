@@ -6,14 +6,13 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 
 /**
  * 地图路线 API 调用节点 ChatClient 配置
+ * 职责：通过高德地图 MCP 工具获取多条路线数据
  */
 @Data
 @Configuration
-@PropertySource(value = "classpath:chatclient/map-route-invoker.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.map-route-invoker")
 public class MapRouteInvokerChatClientConfig {
 
@@ -28,6 +27,8 @@ public class MapRouteInvokerChatClientConfig {
                 .withTopP(model.getTopP())
                 .withMaxToken(model.getMaxTokens())
                 .build();
+        // MCP 工具已在 application.yml 中全局启用 (spring.ai.dashscope.mcp.client.toolcallback.enabled: true)
+        // 此处不需额外注册工具，LLM 会根据 system prompt 自主调用 amap MCP 工具
         return builder.defaultSystem(prompt).defaultOptions(options).build();
     }
 

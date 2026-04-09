@@ -6,14 +6,11 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-
 /**
  * 景区知识问答生成节点 ChatClient 配置
  */
 @Data
 @Configuration
-@PropertySource(value = "classpath:chatclient/scenic-knowledge.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.scenic-knowledge")
 public class ScenicKnowledgeChatClientConfig {
 

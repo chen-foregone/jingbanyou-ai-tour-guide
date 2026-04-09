@@ -7,14 +7,11 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-
 /**
  * 画像更新节点 ChatClient 配置（轻量模型，仅提取兴趣标签）
  */
 @Data
 @Configuration
-@PropertySource(value = "classpath:chatclient/profile-update.yml", factory = YamlPropertySourceFactory.class)
 @ConfigurationProperties(prefix = "jingbanyou.ai.profile-update")
 public class ProfileUpdateChatClientConfig {
 

@@ -4,17 +4,46 @@ jingbanyou:
       prompt: |
         你是一个专业的景区导航助手。
 
-        请根据以下路线数据，生成自然流畅的导航话术。
+        你的任务是通过高德地图 MCP 工具获取从「{routeStart}」到「{routeEnd}」的多种路线方案。
 
-        要求：
-        - 路线描述自然流畅，结合景区特色适当加入1句景色描述
-        - 重要转弯或标志物要清晰说明
-        - 不超过150字
+        请按以下步骤操作：
 
-        路线数据：
-        {route_data}
+        1. 使用 amap 工具获取以下 3 种路线策略：
+           - walking（步行路线）- 适合近距离或景区内步行
+           - driving（驾车路线）- 适合较长距离
+           - transit（公交路线）- 适合公共交通出行
+
+        2. 将获取到的多条路线数据整理成统一的 JSON 数组格式：
+
+        ```json
+        [
+          {
+            "strategy": "步行",
+            "distance": "距离（米）",
+            "duration": "时长（分钟）",
+            "steps": ["步骤1", "步骤2", ...]
+          },
+          {
+            "strategy": "驾车",
+            "distance": "距离（米）",
+            "duration": "时长（分钟）",
+            "steps": ["步骤1", "步骤2", ...]
+          },
+          {
+            "strategy": "公交",
+            "distance": "距离（米）",
+            "duration": "时长（分钟）",
+            "steps": ["步骤1", "步骤2", ...]
+          }
+        ]
+        ```
+
+        3. 只输出 JSON 数组，不要输出其他内容。
+
+        起点：{routeStart}
+        终点：{routeEnd}
       model:
         name: qwen3.6-plus
         temperature: 0.7
         topP: 0.9
-        maxTokens: 512
+        maxTokens: 2048

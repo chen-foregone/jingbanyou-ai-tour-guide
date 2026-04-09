@@ -2,6 +2,7 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
+import cn.edu.gdou.jingbanyou.tourist.service.ProfileVectorStoreService;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit;
  *   3. 累加已访问景点（最多 20 个）
  *   4. turnCount++
  *   5. 写回 OverAllState，异步写 Redis（TTL 24h）
- * 注意：暂时禁用，等待配置完善后启用
+ *   6. 异步写入向量库（用于语义检索历史偏好）
  */
 @Slf4j
 // @Component  // TODO: 添加 jingbanyou.ai.profile-update 配置后启用
@@ -40,14 +41,17 @@ public class ProfileUpdaterNode implements NodeAction {
     private final ChatClient chatClient;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final ProfileVectorStoreService profileVectorStoreService;
 
     public ProfileUpdaterNode(
             @Qualifier("profileUpdateChatClient") ChatClient chatClient,
             RedisTemplate<String, String> redisTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            ProfileVectorStoreService profileVectorStoreService) {
         this.chatClient = chatClient;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.profileVectorStoreService = profileVectorStoreService;
     }
 
     @Override
@@ -79,6 +83,9 @@ public class ProfileUpdaterNode implements NodeAction {
 
         // 5. 异步写 Redis
         asyncSaveToRedis(profile);
+
+        // 6. 异步写向量库（用于语义检索）
+        asyncSaveToVectorStore(profile);
 
         log.debug("画像更新完成，visitorId={}, 兴趣标签={}, 轮次={}",
                 profile.getVisitorId(), profile.getInterestTags(), profile.getTurnCount());
@@ -122,6 +129,19 @@ public class ProfileUpdaterNode implements NodeAction {
             log.debug("画像已异步写入 Redis，visitorId={}", profile.getVisitorId());
         } catch (Exception e) {
             log.warn("画像写入 Redis 失败，visitorId={}", profile.getVisitorId(), e);
+        }
+    }
+
+    @Async
+    public void asyncSaveToVectorStore(VisitorProfile profile) {
+        if (profile.getVisitorId() == null || profile.getVisitorId().isBlank()) {
+            return;
+        }
+        try {
+            profileVectorStoreService.saveProfile(profile);
+            log.debug("画像已异步写入向量库，visitorId={}", profile.getVisitorId());
+        } catch (Exception e) {
+            log.warn("画像写入向量库失败，visitorId={}", profile.getVisitorId(), e);
         }
     }
 }

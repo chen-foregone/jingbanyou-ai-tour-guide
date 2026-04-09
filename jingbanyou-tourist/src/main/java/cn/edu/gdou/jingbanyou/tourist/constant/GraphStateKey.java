@@ -96,6 +96,20 @@ public final class GraphStateKey {
      * 来源：MapRouteApiInvokerNode
      */
     public static final String ROUTE_DESCRIPTION = "routeDescription";
+
+    /**
+     * 多条原始路线数据（从MCP获取）
+     * 类型：List<Map> 每条路线包含 strategy(策略)、distance(距离)、duration(时长)、steps(步骤)
+     * 来源：MapRouteApiInvokerNode
+     */
+    public static final String RAW_ROUTES = "rawRoutes";
+
+    /**
+     * 润色后的多条路线（结合用户画像）
+     * 类型：List<Map> 每条路线包含 description(润色描述)、suitableFor(适合人群)、tips(提示)
+     * 来源：RoutePolishNode
+     */
+    public static final String POLISHED_ROUTES = "polishedRoutes";
     
     // ==================== 知识问答相关 ====================
     

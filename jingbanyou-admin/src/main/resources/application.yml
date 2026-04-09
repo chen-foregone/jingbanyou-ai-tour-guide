@@ -62,6 +62,8 @@ spring:
       max-file-size: 10MB
       # 设置总上传的文件大小
       max-request-size: 20MB
+  config:
+    import: classpath:chatclient/*.yml
   ai:
     dashscope:
       api-key: ${DASHSCOPE_API_KEY:sk-25a0e981c714438e85fe067faaf64295}
