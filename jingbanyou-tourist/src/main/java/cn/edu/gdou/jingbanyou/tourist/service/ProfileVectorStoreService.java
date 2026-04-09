@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.filter.FilterExpression;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -71,7 +70,7 @@ public class ProfileVectorStoreService {
             SearchRequest request = SearchRequest.builder()
                     .query(query)
                     .topK(DEFAULT_TOP_K)
-                    .filterExpression(buildFilterExpression(visitorId))
+                    .filterExpression("visitorId == '" + visitorId + "'")
                     .build();
 
             List<org.springframework.ai.vectorstore.document.Document> docs =
@@ -153,18 +152,6 @@ public class ProfileVectorStoreService {
                 String.join(",", profile.getVisitedSpots()) : "");
         metadata.put("timestamp", Instant.now().toEpochMilli());
         return metadata;
-    }
-
-    /**
-     * 构建过滤表达式（只检索当前用户的相似记录）
-     */
-    private FilterExpression buildFilterExpression(String visitorId) {
-        return new FilterExpression() {
-            @Override
-            public String toFilterExpression() {
-                return String.format("visitorId == '%s'", visitorId);
-            }
-        };
     }
 
     /**
