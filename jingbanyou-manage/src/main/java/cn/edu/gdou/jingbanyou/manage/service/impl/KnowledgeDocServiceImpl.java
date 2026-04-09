@@ -50,16 +50,30 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
 
         log.info("开始向量化文档: id={}, title={}", docId, doc.getDocTitle());
 
-        // 删除旧的 chunk 记录（同步清除 Redis 中的向量）
+        // 1. 查出该文档在 MySQL 中的旧 vectorId（用于删除 Redis 向量）
+        List<KnowledgeChunk> oldChunks = knowledgeChunkMapper.selectList(
+                new LambdaQueryWrapper<KnowledgeChunk>().eq(KnowledgeChunk::getDocId, docId));
+        List<String> oldVectorIds = oldChunks.stream()
+                .map(KnowledgeChunk::getVectorId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        // 2. 删除 MySQL 旧 chunk 记录
         knowledgeChunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>()
                 .eq(KnowledgeChunk::getDocId, docId));
 
-        // 使用 Spring AI 的 TokenTextSplitter 切分文档
+        // 3. 切分文档
         TokenTextSplitter splitter = new TokenTextSplitter();
         Document sourceDoc = new Document(doc.getDocContent());
         List<Document> splitDocs = splitter.split(sourceDoc);
 
-        // 逐条写入 Redis 向量库并保存 chunk 记录
+        // 4. 先删 Redis 旧向量
+        if (!oldVectorIds.isEmpty()) {
+            knowledgeVectorStore.delete(oldVectorIds);
+            log.info("已删除 Redis 中的旧向量: {} 个", oldVectorIds.size());
+        }
+
+        // 5. 逐条写入 Redis 向量库并保存 chunk 记录
         for (int i = 0; i < splitDocs.size(); i++) {
             Document splitDoc = splitDocs.get(i);
             String text = splitDoc.getText();
