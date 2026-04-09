@@ -41,9 +41,9 @@ public class ProfileVectorStoreService {
             Map<String, Object> metadata = buildMetadata(profile);
 
             profileVectorStore.add(List.of(
-                    org.springframework.ai.vectorstore.document.Document.builder()
+                    org.springframework.ai.document.Document.builder()
                             .id(profile.getVisitorId())
-                            .content(text)
+                            .text(text)
                             .metadata(metadata)
                             .build()
             ));
@@ -73,14 +73,14 @@ public class ProfileVectorStoreService {
                     .filterExpression("visitorId == '" + visitorId + "'")
                     .build();
 
-            List<org.springframework.ai.vectorstore.document.Document> docs =
+            List<org.springframework.ai.document.Document> docs =
                     profileVectorStore.similaritySearch(request);
 
             List<SimilarProfile> results = new ArrayList<>();
-            for (org.springframework.ai.vectorstore.document.Document doc : docs) {
+            for (org.springframework.ai.document.Document doc : docs) {
                 SimilarProfile sp = SimilarProfile.builder()
                         .visitorId(doc.getId())
-                        .content(doc.getContent())
+                        .content(doc.getText())
                         .score(doc.getScore() != null ? doc.getScore() : 0.0)
                         .metadata(doc.getMetadata())
                         .build();
