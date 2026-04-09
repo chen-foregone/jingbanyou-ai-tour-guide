@@ -50,28 +50,13 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
 
         log.info("开始向量化文档: id={}, title={}", docId, doc.getDocTitle());
 
-        // 1. 查出该文档在 MySQL 中的旧 vectorId（用于删除 Redis 向量）
-        List<KnowledgeChunk> oldChunks = knowledgeChunkMapper.selectList(
-                new LambdaQueryWrapper<KnowledgeChunk>().eq(KnowledgeChunk::getDocId, docId));
-        List<String> oldVectorIds = oldChunks.stream()
-                .map(KnowledgeChunk::getVectorId)
-                .filter(Objects::nonNull)
-                .toList();
-
-        // 2. 删除 MySQL 旧 chunk 记录
-        knowledgeChunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>()
-                .eq(KnowledgeChunk::getDocId, docId));
+        // 1-2. 清理旧 chunk 和旧向量（抽取公共方法复用）
+        deleteChunksAndVectors(docId);
 
         // 3. 切分文档
         TokenTextSplitter splitter = new TokenTextSplitter();
         Document sourceDoc = new Document(doc.getDocContent());
         List<Document> splitDocs = splitter.split(sourceDoc);
-
-        // 4. 先删 Redis 旧向量
-        if (!oldVectorIds.isEmpty()) {
-            knowledgeVectorStore.delete(oldVectorIds);
-            log.info("已删除 Redis 中的旧向量: {} 个", oldVectorIds.size());
-        }
 
         // 5. 逐条写入 Redis 向量库并保存 chunk 记录
         for (int i = 0; i < splitDocs.size(); i++) {
@@ -111,6 +96,48 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         updateById(doc);
 
         log.info("文档向量化完成: id={}, chunks={}", docId, splitDocs.size());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeDocWithVector(Long docId) {
+        KnowledgeDoc doc = getById(docId);
+        if (doc == null) {
+            throw new RuntimeException("文档不存在: " + docId);
+        }
+
+        log.info("开始删除文档及其向量: id={}, title={}", docId, doc.getDocTitle());
+
+        // 1. 清理 chunk 表 + Redis 向量
+        deleteChunksAndVectors(docId);
+
+        // 2. 删除文档主记录
+        removeById(docId);
+
+        log.info("文档删除完成: id={}", docId);
+    }
+
+    /**
+     * 清理指定文档的 chunk 记录和 Redis 向量（向量化和删除时共用）
+     */
+    private void deleteChunksAndVectors(Long docId) {
+        // 查出旧 vectorId 列表
+        List<KnowledgeChunk> oldChunks = knowledgeChunkMapper.selectList(
+                new LambdaQueryWrapper<KnowledgeChunk>().eq(KnowledgeChunk::getDocId, docId));
+        List<String> oldVectorIds = oldChunks.stream()
+                .map(KnowledgeChunk::getVectorId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        // 删 MySQL chunk 记录
+        knowledgeChunkMapper.delete(
+                new LambdaQueryWrapper<KnowledgeChunk>().eq(KnowledgeChunk::getDocId, docId));
+
+        // 删 Redis 向量
+        if (!oldVectorIds.isEmpty()) {
+            knowledgeVectorStore.delete(oldVectorIds);
+            log.info("已删除 Redis 中的旧向量: {} 个", oldVectorIds.size());
+        }
     }
 
     @Override

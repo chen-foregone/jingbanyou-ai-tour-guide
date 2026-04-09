@@ -14,9 +14,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 路线收集节点（阶段一）
- * 任务：通过高德地图 MCP 工具获取「起点→终点」的多种路线方案（步行/驾车/公交）
- * 输出：多条原始路线数据，存入 state.RAW_ROUTES
+ * 路线收集节点
+ * 职责：
+ * 1. 检测用户问题中起点/终点是否完整
+ * 2. 缺参 → 返回引导语（GUIDE_MESSAGE），中断路线规划
+ * 3. 参齐全 → 调用高德地图 MCP，返回多条路线（RAW_ROUTES）
+ * <p>
+ * 协议：prompt 要求模型遵守输出格式约定：
+ * - 参齐全：直接输出路线 JSON 数组 [...]
+ * - 缺参：以纯文本回复（不含 JSON 结构），用于引导用户补充信息
  */
 @Component
 public class MapRouteApiInvokerNode implements NodeAction {
@@ -33,59 +39,44 @@ public class MapRouteApiInvokerNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        // 1. 获取起点和终点
-        String start = state.value(GraphStateKey.ROUTE_START, String.class).orElse("");
-        String end = state.value(GraphStateKey.ROUTE_END, String.class).orElse("");
+        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
 
-        if (start.isEmpty() || end.isEmpty()) {
-            throw new IllegalStateException("起点或终点为空，无法规划路线");
-        }
-
-        // 2. 调用 ChatClient，通过 MCP 工具获取多条路线
-        // LLM 会自动调用 amap MCP 工具获取步行、驾车、公交路线
-        String routesJson = chatClient.prompt()
-                .user(userSpec -> userSpec.params(Map.of(
-                        "routeStart", start,
-                        "routeEnd", end
-                )))
+        String llmResponse = chatClient.prompt()
+                .user(userSpec -> userSpec.params(Map.of("question", question)))
                 .call()
                 .content();
 
-        // 3. 解析 JSON 响应
-        List<Map<String, Object>> rawRoutes = parseRoutes(routesJson);
-
-        // 4. 存入 state
-        return state.updateState(Map.of(GraphStateKey.RAW_ROUTES, rawRoutes));
+        // 协议判断：JSON 数组以 [ 开头
+        if (llmResponse != null && llmResponse.trim().startsWith("[")) {
+            List<Map<String, Object>> rawRoutes = parseRoutes(llmResponse);
+            return state.updateState(Map.of(GraphStateKey.RAW_ROUTES, rawRoutes));
+        } else {
+            // 缺参或解析失败，返回引导语
+            return state.updateState(Map.of(
+                    GraphStateKey.GUIDE_MESSAGE,
+                    llmResponse != null ? llmResponse : "请告诉我您的起点和终点",
+                    GraphStateKey.RAW_ROUTES,
+                    new ArrayList<>()
+            ));
+        }
     }
 
-    /**
-     * 解析 LLM 返回的路线 JSON
-     */
     private List<Map<String, Object>> parseRoutes(String json) {
         try {
-            // 尝试直接解析为 List
             return objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
         } catch (Exception e) {
-            // 如果解析失败，尝试清理 JSON（去除 markdown 代码块等）
             String cleaned = cleanJson(json);
             try {
                 return objectMapper.readValue(cleaned, new TypeReference<List<Map<String, Object>>>() {});
             } catch (Exception ex) {
-                // 解析失败，返回空列表
                 return new ArrayList<>();
             }
         }
     }
 
-    /**
-     * 清理 JSON 字符串
-     */
     private String cleanJson(String json) {
         if (json == null) return "[]";
-        // 去除 markdown 代码块标记
         String cleaned = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
-        // 去除多余空白
-        cleaned = cleaned.trim();
-        return cleaned;
+        return cleaned.trim();
     }
 }

@@ -1,10 +1,18 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
+import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.redis.RedisVectorStore;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,17 +23,39 @@ import java.util.Map;
 @Component
 public class ScenicKnowledgeRetrievalNode implements NodeAction {
 
-    public ScenicKnowledgeRetrievalNode() {
-        // 知识检索节点主要通过向量数据库实现，不需要ChatClient
+    //创建redisVector对象
+    RedisVectorStore redisVectorStore;
+
+    public ScenicKnowledgeRetrievalNode(RedisVectorStore redisVectorStore) {
+        this.redisVectorStore = redisVectorStore;
     }
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        // TODO: 实现景区知识检索逻辑
-        // 1. 从state中获取question
-        // 2. 将问题转换为向量
-        // 3. 在向量数据库中检索相似文档
-        // 4. 将检索结果放入state
-        return new HashMap<>();
+        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
+        Long scenicId = state.value(GraphStateKey.SCENIC_ID, Long.class).orElse(0L);
+
+
+        //创建搜索请求对象
+        SearchRequest request = SearchRequest.builder()
+                .query(question)
+                .topK(3)
+                .similarityThreshold(0.55)
+                .filterExpression("scenicId == '" + scenicId + "'")
+                .build();
+
+        //执行检索
+        List<Document> documents = redisVectorStore.doSimilaritySearch(request);
+
+        //处理查询结果
+        //将文档字符串化
+        StringBuilder sb = new StringBuilder();
+        for (Document document : documents) {
+            sb.append(document.getText()).append("\n");
+        }
+        //更新state
+        state.updateState(Map.of(GraphStateKey.RETRIEVED_DOCS, sb.toString()));
+        //返回结果
+        return state.updateState(Map.of(GraphStateKey.RETRIEVED_DOCS, sb.toString()));
     }
 }

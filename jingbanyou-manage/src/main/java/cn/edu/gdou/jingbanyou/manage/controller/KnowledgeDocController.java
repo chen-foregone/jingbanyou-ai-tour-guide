@@ -79,13 +79,14 @@ public class KnowledgeDocController extends BaseController
     }
 
     /**
-     * 删除知识库
+     * 删除知识库（同步清理 Redis 向量 + MySQL chunk 记录）
      */
     @Log(title = "知识库管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
     public AjaxResult remove(@PathVariable Long id)
     {
-        return toAjax(knowledgeDocService.removeById(id));
+        knowledgeDocService.removeDocWithVector(id);
+        return success();
     }
 
     /**

@@ -20,7 +20,7 @@ jingbanyou:
 
         游客问题：{question}
       model:
-        name: qwen3.6-plus
-        temperature: 0.75
-        topP: 0.92
-        maxTokens: 1024
+        name: qwen-turbo
+        temperature: 0.5
+        topP: 0.85
+        maxTokens: 512

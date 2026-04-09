@@ -31,4 +31,11 @@ public interface IKnowledgeDocService extends IService<KnowledgeDoc>
      * @return 成功向量化的数量
      */
     int batchVectorizeByScenic(Long scenicId);
+
+    /**
+     * 删除文档（同步清理 Redis 向量 + MySQL chunk 记录）
+     *
+     * @param docId 文档ID
+     */
+    void removeDocWithVector(Long docId);
 }
