@@ -75,4 +75,41 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
 
         log.info("文档切分完成: id={}, chunks={}", docId, splitDocs.size());
     }
+
+    @Override
+    public int batchVectorize() {
+        List<KnowledgeDoc> pending = list(new LambdaQueryWrapper<KnowledgeDoc>()
+                .eq(KnowledgeDoc::getVectorized, 0)
+                .eq(KnowledgeDoc::getStatus, 1));
+        int count = 0;
+        for (KnowledgeDoc doc : pending) {
+            try {
+                vectorizeDoc(doc.getId());
+                count++;
+            } catch (Exception e) {
+                log.error("向量化失败: docId={}", doc.getId(), e);
+            }
+        }
+        log.info("批量向量化完成: 共处理 {} 条", count);
+        return count;
+    }
+
+    @Override
+    public int batchVectorizeByScenic(Long scenicId) {
+        List<KnowledgeDoc> pending = list(new LambdaQueryWrapper<KnowledgeDoc>()
+                .eq(KnowledgeDoc::getScenicId, scenicId)
+                .eq(KnowledgeDoc::getVectorized, 0)
+                .eq(KnowledgeDoc::getStatus, 1));
+        int count = 0;
+        for (KnowledgeDoc doc : pending) {
+            try {
+                vectorizeDoc(doc.getId());
+                count++;
+            } catch (Exception e) {
+                log.error("向量化失败: docId={}", doc.getId(), e);
+            }
+        }
+        log.info("景区 {} 批量向量化完成: 共处理 {} 条", scenicId, count);
+        return count;
+    }
 }
