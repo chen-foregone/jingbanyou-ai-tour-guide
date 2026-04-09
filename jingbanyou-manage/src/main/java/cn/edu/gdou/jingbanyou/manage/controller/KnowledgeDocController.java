@@ -100,6 +100,26 @@ public class KnowledgeDocController extends BaseController
     }
 
     /**
+     * 批量向量化（所有 vectorized=0 的文档）
+     */
+    @Log(title = "知识库管理", businessType = BusinessType.UPDATE)
+    @PostMapping("/vectorize/batch")
+    public AjaxResult batchVectorize() {
+        int count = knowledgeDocService.batchVectorize();
+        return success("批量向量化完成，共处理 " + count + " 条文档");
+    }
+
+    /**
+     * 按景区批量向量化（指定景区下 vectorized=0 的文档）
+     */
+    @Log(title = "知识库管理", businessType = BusinessType.UPDATE)
+    @PostMapping("/vectorize/batch/{scenicId}")
+    public AjaxResult batchVectorizeByScenic(@PathVariable Long scenicId) {
+        int count = knowledgeDocService.batchVectorizeByScenic(scenicId);
+        return success("景区 " + scenicId + " 批量向量化完成，共处理 " + count + " 条文档");
+    }
+
+    /**
      * Entity 转 VO
      */
     private KnowledgeDocVO convertToVO(KnowledgeDoc doc)
