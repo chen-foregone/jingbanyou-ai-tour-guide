@@ -80,6 +80,7 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
             chunk.setChunkIndex(i);
             chunk.setChunkContent(text);
             chunk.setChunkTokens(text.length() / 2);
+            //切分后的docId为vectorId
             chunk.setVectorId(splitDoc.getId());
             chunk.setEmbeddingVersion(embeddingModel);
             chunk.setCreateTime(new Date());

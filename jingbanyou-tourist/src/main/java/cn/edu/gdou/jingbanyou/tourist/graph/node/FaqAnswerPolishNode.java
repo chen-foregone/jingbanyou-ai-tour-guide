@@ -1,5 +1,6 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
+import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
@@ -25,7 +26,11 @@ public class FaqAnswerPolishNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        // TODO: 实现FAQ答案润色逻辑
+        //1. 获取FAQ答案
+        String faqAnswer = state.value(GraphStateKey.FAQ_ANSWER, String.class).orElse("");
+        //2. 调用模型
+        chatClient.prompt()
+                .user(userSpec -> userSpec.param(GraphStateKey.FAQ_ANSWER, faqAnswer));
         return new HashMap<>();
     }
 }

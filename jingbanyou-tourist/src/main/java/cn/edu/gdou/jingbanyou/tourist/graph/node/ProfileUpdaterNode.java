@@ -11,6 +11,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  *   6. 异步写入向量库（用于语义检索历史偏好）
  */
 @Slf4j
-// @Component  // TODO: 添加 jingbanyou.ai.profile-update 配置后启用
+@Component
 public class ProfileUpdaterNode implements NodeAction {
 
     private static final String REDIS_KEY_PREFIX = "visitor:profile:";

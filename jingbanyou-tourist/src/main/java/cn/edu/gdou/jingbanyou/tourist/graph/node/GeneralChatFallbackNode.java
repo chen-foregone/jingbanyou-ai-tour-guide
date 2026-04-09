@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +15,7 @@ import java.util.Map;
  * 任务：处理游客的闲聊、投诉、天气等非景区问题，要求语气友好、响应快
  * 注意：暂时禁用，等待配置完善后启用
  */
-// @Component  // TODO: 添加 jingbanyou.ai.general-chat 配置后启用
+@Component
 public class GeneralChatFallbackNode implements NodeAction {
 
     private final ChatClient chatClient;
