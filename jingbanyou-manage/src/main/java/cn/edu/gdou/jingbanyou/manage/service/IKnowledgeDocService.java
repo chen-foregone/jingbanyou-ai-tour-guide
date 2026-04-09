@@ -15,5 +15,20 @@ public interface IKnowledgeDocService extends IService<KnowledgeDoc>
      *
      * @param docId 文档ID
      */
-    public void vectorizeDoc(Long docId);
+    void vectorizeDoc(Long docId);
+
+    /**
+     * 批量向量化（只处理 vectorized=0 的文档）
+     *
+     * @return 成功向量化的数量
+     */
+    int batchVectorize();
+
+    /**
+     * 按景区 ID 批量向量化（只处理指定景区下 vectorized=0 的文档）
+     *
+     * @param scenicId 景区ID
+     * @return 成功向量化的数量
+     */
+    int batchVectorizeByScenic(Long scenicId);
 }
