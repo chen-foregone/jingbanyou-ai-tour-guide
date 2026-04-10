@@ -109,6 +109,26 @@ public final class GraphNodeNames {
      * 注意：异步写入 Redis（TTL 24h）
      */
     public static final String PROFILE_UPDATER = "profileUpdater";
+
+    // ==================== 对话记忆相关 ====================
+
+    /**
+     * 对话记忆加载节点
+     * 功能：从 Redis ChatMemory 加载最近 N 轮对话历史，注入到 State
+     * 输入：SESSION_ID, QUESTION
+     * 输出：HISTORY
+     * 位置：START → MemoryLoader → ProfileLoader → Distinguish
+     */
+    public static final String MEMORY_LOADER = "memoryLoader";
+
+    /**
+     * 对话记忆更新节点（Graph 出口）
+     * 功能：将 AI 回复写入 Redis ChatMemory，持久化到 MySQL VisitorInteraction
+     * 输入：SESSION_ID, QUESTION, ANSWER
+     * 输出：（无，仅副作用）
+     * 位置：ProfileUpdater → MemoryUpdater → END
+     */
+    public static final String MEMORY_UPDATER = "memoryUpdater";
     
     // ==================== 特殊节点 ====================
     

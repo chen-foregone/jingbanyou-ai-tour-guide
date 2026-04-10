@@ -19,9 +19,6 @@ public class ScenicFaqRagTool {
     @Autowired
     private IFaqService faqService;
 
-    @Setter
-    private IFaqService faqService;
-
     /**
      * 检索景区 FAQ 知识库，返回最匹配的标准问答
      *

@@ -1,6 +1,8 @@
 jingbanyou:
   ai:
     distinguish:
+      # 多模态提示词（用于音频场景）
+      # 注意：DistinguishNode 内部构建完整 prompt，此处 prompt 仅用于纯文本场景
       prompt: |
         你是一个景区智能导游助手的意图分类器。
 
@@ -19,8 +21,9 @@ jingbanyou:
         请只输出分类标签，不要输出任何解释：
         route_plan 或 spot_question 或 complex_other
       model:
-        name: qwen3.5-flash
+        name: qwen-audio-turbo       # 支持音频多模态
         temperature: 0.1
         topP: 0.8
-        maxTokens: 32
+        maxTokens: 128
         responseFormat: JSON_OBJECT
+        multimodal: true              # 标记为多模态模型

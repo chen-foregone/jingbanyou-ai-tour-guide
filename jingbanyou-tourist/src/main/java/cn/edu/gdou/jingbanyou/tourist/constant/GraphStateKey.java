@@ -171,6 +171,12 @@ public final class GraphStateKey {
     public static final String VISITOR_ID = "visitorId";
 
     /**
+     * 会话 ID（用于 Redis ChatMemory key）
+     * 类型：String
+     */
+    public static final String SESSION_ID = "sessionId";
+
+    /**
      * 游客画像（压缩 JSON，< 200 Token）
      * 类型：VisitorProfile
      * 来源：ProfileLoaderNode 初始化，ProfileUpdaterNode 更新
