@@ -73,17 +73,13 @@ public class ProfileUpdaterNode implements NodeAction {
         // 3. turnCount++
         profile.setTurnCount(profile.getTurnCount() + 1);
 
-        // 4. 写回 OverAllState
-        Map<String, Object> result = new HashMap<>();
-        result.put(GraphStateKey.VISITOR_PROFILE, profile);
-
-        // 5. 异步写 Redis
-        asyncSaveToRedis(profile);
-
         log.debug("画像更新完成，visitorId={}, 兴趣标签={}, 轮次={}",
                 profile.getVisitorId(), profile.getInterestTags(), profile.getTurnCount());
 
-        return result;
+        // 4. 异步写 Redis
+        asyncSaveToRedis(profile);
+
+        return state.updateState(Map.of(GraphStateKey.VISITOR_PROFILE, profile));
     }
 
     /**

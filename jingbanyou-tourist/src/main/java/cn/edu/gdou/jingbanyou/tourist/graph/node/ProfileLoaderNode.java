@@ -59,9 +59,7 @@ public class ProfileLoaderNode implements NodeAction {
             enrichFromVectorStore(profile);
         }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put(GraphStateKey.VISITOR_PROFILE, profile);
-        return result;
+        return state.updateState(Map.of(GraphStateKey.VISITOR_PROFILE, profile));
     }
 
     /**
@@ -132,7 +130,10 @@ public class ProfileLoaderNode implements NodeAction {
         String tags = (String) metadata.get("interestTags");
         if (tags != null && !tags.isBlank()) {
             String[] newTags = tags.split(",");
-            Set<String> mergedTags = new LinkedHashSet<>(profile.getInterestTags());
+            Set<String> mergedTags = new LinkedHashSet<>();
+            if (profile.getInterestTags() != null) {
+                mergedTags.addAll(profile.getInterestTags());
+            }
             Collections.addAll(mergedTags, newTags);
             profile.setInterestTags(new ArrayList<>(mergedTags));
         }
@@ -141,11 +142,10 @@ public class ProfileLoaderNode implements NodeAction {
         String spots = (String) metadata.get("visitedSpots");
         if (spots != null && !spots.isBlank()) {
             String[] newSpots = spots.split(",");
-            List<String> visitedSpots = profile.getVisitedSpots();
-            if (visitedSpots == null) {
-                visitedSpots = new ArrayList<>();
+            Set<String> mergedSpots = new LinkedHashSet<>();
+            if (profile.getVisitedSpots() != null) {
+                mergedSpots.addAll(profile.getVisitedSpots());
             }
-            Set<String> mergedSpots = new LinkedHashSet<>(visitedSpots);
             Collections.addAll(mergedSpots, newSpots);
             profile.setVisitedSpots(new ArrayList<>(mergedSpots));
         }

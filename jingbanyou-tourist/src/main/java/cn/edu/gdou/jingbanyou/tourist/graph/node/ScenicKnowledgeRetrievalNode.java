@@ -53,9 +53,7 @@ public class ScenicKnowledgeRetrievalNode implements NodeAction {
         for (Document document : documents) {
             sb.append(document.getText()).append("\n");
         }
-        //更新state
-        state.updateState(Map.of(GraphStateKey.RETRIEVED_DOCS, sb.toString()));
-        //返回结果
-        return state.updateState(Map.of(GraphStateKey.RETRIEVED_DOCS, sb.toString()));
+        String retrievedDocs = sb.toString();
+        return state.updateState(Map.of(GraphStateKey.RETRIEVED_DOCS, retrievedDocs));
     }
 }
