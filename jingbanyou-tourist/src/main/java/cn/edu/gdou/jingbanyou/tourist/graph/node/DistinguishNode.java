@@ -35,7 +35,8 @@ public class DistinguishNode implements NodeAction {
                 .user(userSpec -> userSpec.params(Map.of(QUESTION, question)))
                 .call()
                 .content();
-        String intent = objectMapper.readTree(intentJSON).get(INTENT).asText();
+        String cleaned = intentJSON.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
+        String intent = objectMapper.readTree(cleaned).get(INTENT).asText();
         return state.updateState(Map.of(INTENT, intent));
     }
 }
