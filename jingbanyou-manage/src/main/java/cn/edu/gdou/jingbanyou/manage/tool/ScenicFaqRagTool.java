@@ -2,17 +2,22 @@ package cn.edu.gdou.jingbanyou.manage.tool;
 
 import cn.edu.gdou.jingbanyou.manage.entity.Faq;
 import cn.edu.gdou.jingbanyou.manage.service.IFaqService;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * FAQ 知识库 RAG 检索工具
  * AI 可通过此工具在景区 FAQ 知识库中检索最匹配的问答
  */
 @Slf4j
+@Component
 public class ScenicFaqRagTool {
+
+    @Autowired
+    private IFaqService faqService;
 
     @Setter
     private IFaqService faqService;

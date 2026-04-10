@@ -1,8 +1,10 @@
 package cn.edu.gdou.jingbanyou.tourist.config.chatclient;
 
+import cn.edu.gdou.jingbanyou.manage.tool.ScenicFaqRagTool;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,8 @@ public class FaqPolishChatClientConfig {
 
     private String prompt;
     private ModelConfig model;
+    @Autowired
+    private ScenicFaqRagTool scenicFaqRagTool;
 
     @Bean("faqPolishChatClient")
     public ChatClient chatClient(ChatClient.Builder builder) {
@@ -29,7 +33,7 @@ public class FaqPolishChatClientConfig {
                 .withTopP(model.getTopP())
                 .withMaxToken(model.getMaxTokens())
                 .build();
-        return builder.defaultSystem(prompt).defaultOptions(options).build();
+        return builder.defaultSystem(prompt).defaultOptions(options).build().prompt().tools(scenicFaqRagTool).mutate().build();
     }
 
     @Data

@@ -61,28 +61,7 @@ public final class GraphStateKey {
     public static final String INTENT = "intent";
     
     // ==================== 路线规划相关 ====================
-    
-    /**
-     * 路线起点
-     * 类型：String
-     * 来源：RouteParamExtractorNode
-     */
-    public static final String ROUTE_START = "routeStart";
-    
-    /**
-     * 路线终点
-     * 类型：String
-     * 来源：RouteParamExtractorNode
-     */
-    public static final String ROUTE_END = "routeEnd";
-    
-    /**
-     * 缺失的参数列表
-     * 类型：List<String>
-     * 来源：RouteParamExtractorNode
-     */
-    public static final String MISSING_PARAMS = "missingParams";
-    
+
     /**
      * 路线数据（结构化）
      * 类型：String（JSON 格式）
@@ -143,13 +122,6 @@ public final class GraphStateKey {
      */
     public static final String CHAT_RESPONSE = "chatResponse";
     
-    /**
-     * 引导语（参数缺失时）
-     * 类型：String
-     * 来源：MissingParamGuideNode
-     */
-    public static final String GUIDE_MESSAGE = "guideMessage";
-    
     // ==================== 元数据相关 ====================
     
     /**
@@ -206,12 +178,12 @@ public final class GraphStateKey {
     public static final String VISITOR_PROFILE = "visitorProfile";
 
     /**
-     * 路径参数是否存在
-     * 类型：Boolean
-     * 来源：RouteParamExtractorNode 初始化，RouteParamExtractorNode 更新
+     * 引导语（参数缺失时）
+     * 类型：String
+     * 来源：MapRouteApiInvokerNode（LLM 缺参回复）
      */
-    public static final String ROUTE_PARAMS_EXIST = "routeParamsExist";
-    
+    public static final String GUIDE_MESSAGE = "guideMessage";
+
     // 私有构造函数，防止实例化
     private GraphStateKey() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");

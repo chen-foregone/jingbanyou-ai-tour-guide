@@ -26,12 +26,15 @@ public class GeneralChatFallbackNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        String answer = "";
         //1. 获取用户问题
         String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
         //2. 调用模型回答问题
-        while (answer == null || answer.isEmpty()) {
-            answer = chatClient.prompt(question).call().content();
+        String answer = chatClient.prompt()
+                .user(userSpec -> userSpec.params(Map.of("question", question)))
+                .call()
+                .content();
+        if(answer == null){
+            answer = "抱歉，此问题我无法回答。";
         }
         //3. 直接返回结果
         return state.updateState(Map.of(GraphStateKey.ANSWER, answer));
