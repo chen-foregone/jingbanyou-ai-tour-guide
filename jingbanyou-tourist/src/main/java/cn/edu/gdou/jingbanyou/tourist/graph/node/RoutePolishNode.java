@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
-import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
+import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
+
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
@@ -35,25 +36,19 @@ public class RoutePolishNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        // 1. 获取原始路线
-        List<Map<String, Object>> rawRoutes = state.value(GraphStateKey.RAW_ROUTES, List.class)
+        List<Map<String, Object>> rawRoutes = state.value(RAW_ROUTES, List.class)
                 .orElse(new ArrayList<>());
 
         if (rawRoutes.isEmpty()) {
-            return state.updateState(Map.of(GraphStateKey.POLISHED_ROUTES, new ArrayList<>()));
+            return state.updateState(Map.of(POLISHED_ROUTES, new ArrayList<>()));
         }
 
-        // 2. 获取用户画像
-        VisitorProfile profile = state.value(GraphStateKey.VISITOR_PROFILE, VisitorProfile.class)
+        VisitorProfile profile = state.value(VISITOR_PROFILE, VisitorProfile.class)
                 .orElse(new VisitorProfile());
 
-        // 3. 构建用户画像描述（用于 prompt）
         String userProfileDesc = buildProfileDescription(profile);
-
-        // 4. 将原始路线序列化为 JSON
         String rawRoutesJson = objectMapper.writeValueAsString(rawRoutes);
 
-        // 5. 调用 LLM 进行润色
         String polishedJson = chatClient.prompt()
                 .user(userSpec -> userSpec.params(Map.of(
                         "userProfile", userProfileDesc,
@@ -62,16 +57,10 @@ public class RoutePolishNode implements NodeAction {
                 .call()
                 .content();
 
-        // 6. 解析润色后的路线
         List<Map<String, Object>> polishedRoutes = parsePolishedRoutes(polishedJson);
-
-        // 7. 存入 state
-        return state.updateState(Map.of(GraphStateKey.POLISHED_ROUTES, polishedRoutes));
+        return state.updateState(Map.of(POLISHED_ROUTES, polishedRoutes));
     }
 
-    /**
-     * 构建用户画像描述字符串
-     */
     private String buildProfileDescription(VisitorProfile profile) {
         StringBuilder sb = new StringBuilder();
         sb.append("游客ID: ").append(profile.getVisitorId()).append("\n");
@@ -102,14 +91,10 @@ public class RoutePolishNode implements NodeAction {
         return sb.toString();
     }
 
-    /**
-     * 解析润色后的路线 JSON
-     */
     private List<Map<String, Object>> parsePolishedRoutes(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
         } catch (Exception e) {
-            // 解析失败，清理 JSON 后重试
             String cleaned = cleanJson(json);
             try {
                 return objectMapper.readValue(cleaned, new TypeReference<List<Map<String, Object>>>() {});
@@ -119,9 +104,6 @@ public class RoutePolishNode implements NodeAction {
         }
     }
 
-    /**
-     * 清理 JSON 字符串
-     */
     private String cleanJson(String json) {
         if (json == null) return "[]";
         String cleaned = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");

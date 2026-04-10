@@ -1,13 +1,13 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
-import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
+import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
+
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -26,17 +26,14 @@ public class GeneralChatFallbackNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        //1. 获取用户问题
-        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
-        //2. 调用模型回答问题
+        String question = state.value(QUESTION, String.class).orElse("");
         String answer = chatClient.prompt()
                 .user(userSpec -> userSpec.params(Map.of("question", question)))
                 .call()
                 .content();
-        if(answer == null){
+        if (answer == null) {
             answer = "抱歉，此问题我无法回答。";
         }
-        //3. 直接返回结果
-        return state.updateState(Map.of(GraphStateKey.ANSWER, answer));
+        return state.updateState(Map.of(ANSWER, answer));
     }
 }

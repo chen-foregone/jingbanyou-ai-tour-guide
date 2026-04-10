@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
-import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
+import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
+
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
 import cn.edu.gdou.jingbanyou.tourist.service.ProfileVectorStoreService;
 import cn.edu.gdou.jingbanyou.tourist.service.ProfileVectorStoreService.SimilarProfile;
@@ -13,6 +14,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 画像加载节点
@@ -36,8 +38,7 @@ public class ProfileLoaderNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        String visitorId = state.value(GraphStateKey.VISITOR_ID, String.class)
-                .orElse(null);
+        String visitorId = state.value(VISITOR_ID, String.class).orElse(null);
 
         VisitorProfile profile;
 
@@ -54,25 +55,18 @@ public class ProfileLoaderNode implements NodeAction {
                 profile.setVisitorId(visitorId);
                 log.debug("Redis 中无历史画像，初始化空画像，visitorId={}", visitorId);
             }
-
-            // 从向量库检索相似历史偏好
             enrichFromVectorStore(profile);
         }
 
-        return state.updateState(Map.of(GraphStateKey.VISITOR_PROFILE, profile));
+        return state.updateState(Map.of(VISITOR_PROFILE, profile));
     }
 
-    /**
-     * 从向量库检索相似偏好并合并到画像
-     * 基于用户的兴趣标签和偏好路线类型构建检索query
-     */
     private void enrichFromVectorStore(VisitorProfile profile) {
         if (profile.getVisitorId() == null || profile.getVisitorId().isBlank()) {
             return;
         }
 
         try {
-            // 构建检索query，基于已有画像信息
             String query = buildRetrievalQuery(profile);
             if (query.isBlank()) {
                 return;
@@ -85,9 +79,8 @@ public class ProfileLoaderNode implements NodeAction {
                 return;
             }
 
-            // 合并相似偏好到当前画像
             for (SimilarProfile sp : similarProfiles) {
-                if (sp.getScore() > 0.7) { // 只合并高相似度(>0.7)的记录
+                if (sp.getScore() > 0.7) {
                     mergeSimilarProfile(profile, sp);
                 }
             }
@@ -100,9 +93,6 @@ public class ProfileLoaderNode implements NodeAction {
         }
     }
 
-    /**
-     * 构建检索query
-     */
     private String buildRetrievalQuery(VisitorProfile profile) {
         StringBuilder query = new StringBuilder();
 
@@ -117,16 +107,12 @@ public class ProfileLoaderNode implements NodeAction {
         return query.toString().trim();
     }
 
-    /**
-     * 合并相似画像到当前画像
-     */
     private void mergeSimilarProfile(VisitorProfile profile, SimilarProfile sp) {
         Map<String, Object> metadata = sp.getMetadata();
         if (metadata == null) {
             return;
         }
 
-        // 合并兴趣标签
         String tags = (String) metadata.get("interestTags");
         if (tags != null && !tags.isBlank()) {
             String[] newTags = tags.split(",");
@@ -138,7 +124,6 @@ public class ProfileLoaderNode implements NodeAction {
             profile.setInterestTags(new ArrayList<>(mergedTags));
         }
 
-        // 合并已游览景点
         String spots = (String) metadata.get("visitedSpots");
         if (spots != null && !spots.isBlank()) {
             String[] newSpots = spots.split(",");
@@ -150,7 +135,6 @@ public class ProfileLoaderNode implements NodeAction {
             profile.setVisitedSpots(new ArrayList<>(mergedSpots));
         }
 
-        // 合并偏好路线类型（如果当前为空）
         if (profile.getPreferRouteType() == null || profile.getPreferRouteType().isBlank()) {
             String preferRouteType = (String) metadata.get("preferRouteType");
             if (preferRouteType != null && !preferRouteType.isBlank()) {

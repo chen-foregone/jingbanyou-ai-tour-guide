@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
-import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
+import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
+
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -39,23 +40,21 @@ public class MapRouteApiInvokerNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
+        String question = state.value(QUESTION, String.class).orElse("");
 
         String llmResponse = chatClient.prompt()
                 .user(userSpec -> userSpec.params(Map.of("question", question)))
                 .call()
                 .content();
 
-        // 协议判断：JSON 数组以 [ 开头
         if (llmResponse != null && llmResponse.trim().startsWith("[")) {
             List<Map<String, Object>> rawRoutes = parseRoutes(llmResponse);
-            return state.updateState(Map.of(GraphStateKey.RAW_ROUTES, rawRoutes));
+            return state.updateState(Map.of(RAW_ROUTES, rawRoutes));
         } else {
-            // 缺参或解析失败，返回引导语
             return state.updateState(Map.of(
-                    GraphStateKey.GUIDE_MESSAGE,
+                    GUIDE_MESSAGE,
                     llmResponse != null ? llmResponse : "请告诉我您的起点和终点",
-                    GraphStateKey.RAW_ROUTES,
+                    RAW_ROUTES,
                     new ArrayList<>()
             ));
         }

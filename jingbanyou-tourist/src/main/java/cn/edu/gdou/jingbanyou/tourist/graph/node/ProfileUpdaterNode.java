@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
-import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
+import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
+
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
@@ -13,7 +14,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +35,6 @@ public class ProfileUpdaterNode implements NodeAction {
 
     private static final String REDIS_KEY_PREFIX = "visitor:profile:";
     private static final int MAX_TAGS = 10;
-    private static final int MAX_SPOTS = 20;
 
     private final ChatClient chatClient;
     private final RedisTemplate<String, String> redisTemplate;
@@ -52,39 +51,34 @@ public class ProfileUpdaterNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        VisitorProfile profile = state.value(GraphStateKey.VISITOR_PROFILE, VisitorProfile.class)
+        VisitorProfile profile = state.value(VISITOR_PROFILE, VisitorProfile.class)
                 .orElse(new VisitorProfile());
 
-        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
-        String answer = state.value(GraphStateKey.ANSWER, String.class)
-                .or(() -> state.value(GraphStateKey.CHAT_RESPONSE, String.class))
-                .or(() -> state.value(GraphStateKey.ROUTE_DESCRIPTION, String.class))
+        String question = state.value(QUESTION, String.class).orElse("");
+        String answer = state.value(ANSWER, String.class)
+                .or(() -> state.value(CHAT_RESPONSE, String.class))
+                .or(() -> state.value(ROUTE_DESCRIPTION, String.class))
                 .orElse("");
 
-        // 1. 调用轻量模型提取本轮兴趣标签
         List<String> newTags = extractTags(question, answer);
 
-        // 2. 合并标签（去重，最多 MAX_TAGS 个）
         LinkedHashSet<String> merged = new LinkedHashSet<>(newTags);
-        merged.addAll(profile.getInterestTags());
+        if (profile.getInterestTags() != null) {
+            merged.addAll(profile.getInterestTags());
+        }
         List<String> mergedList = new ArrayList<>(merged);
         profile.setInterestTags(mergedList.subList(0, Math.min(mergedList.size(), MAX_TAGS)));
 
-        // 3. turnCount++
         profile.setTurnCount(profile.getTurnCount() + 1);
 
         log.debug("画像更新完成，visitorId={}, 兴趣标签={}, 轮次={}",
                 profile.getVisitorId(), profile.getInterestTags(), profile.getTurnCount());
 
-        // 4. 异步写 Redis
         asyncSaveToRedis(profile);
 
-        return state.updateState(Map.of(GraphStateKey.VISITOR_PROFILE, profile));
+        return state.updateState(Map.of(VISITOR_PROFILE, profile));
     }
 
-    /**
-     * 调用 qwen-turbo 提取本轮兴趣标签
-     */
     private List<String> extractTags(String question, String answer) {
         try {
             String raw = chatClient.prompt()
@@ -94,7 +88,6 @@ public class ProfileUpdaterNode implements NodeAction {
                     .call()
                     .content();
 
-            // 期望模型返回纯 JSON 数组，如 ["历史","宗教文化"]
             if (raw != null && raw.contains("[")) {
                 String jsonPart = raw.substring(raw.indexOf('['), raw.lastIndexOf(']') + 1);
                 return objectMapper.readValue(jsonPart,
@@ -120,5 +113,4 @@ public class ProfileUpdaterNode implements NodeAction {
             log.warn("画像写入 Redis 失败，visitorId={}", profile.getVisitorId(), e);
         }
     }
-
 }

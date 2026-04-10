@@ -1,17 +1,15 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
+import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
+
 import cn.edu.gdou.jingbanyou.manage.config.FaqVectorStoreConfig;
-import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -32,16 +30,14 @@ public class FaqAnswerPolishNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        //1. 获得FAQ答案
-        String faqAnswer = state.value(GraphStateKey.FAQ_ANSWER, String.class).orElse("");
-        //2. 获得用户问题
-        String question = state.value(GraphStateKey.QUESTION, String.class).orElse("");
-        //3. 调用模型
+        String faqAnswer = state.value(FAQ_ANSWER, String.class).orElse("");
+        String question = state.value(QUESTION, String.class).orElse("");
+
         String answer = chatClient.prompt()
-                .user(userSpec -> userSpec.params(Map.of(GraphStateKey.FAQ_ANSWER, faqAnswer, GraphStateKey.QUESTION, question)))
+                .user(userSpec -> userSpec.params(Map.of(FAQ_ANSWER, faqAnswer, QUESTION, question)))
                 .call()
                 .content();
 
-        return state.updateState(Map.of(GraphStateKey.ANSWER, answer));
+        return state.updateState(Map.of(ANSWER, answer));
     }
 }
