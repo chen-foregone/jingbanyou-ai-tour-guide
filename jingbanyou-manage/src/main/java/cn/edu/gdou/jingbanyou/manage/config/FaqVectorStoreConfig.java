@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.manage.config;
 
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.ai.vectorstore.redis.RedisVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;

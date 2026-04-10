@@ -4,6 +4,7 @@ import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
