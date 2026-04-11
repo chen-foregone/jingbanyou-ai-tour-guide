@@ -3,6 +3,7 @@ package cn.edu.gdou.jingbanyou.tourist.config.chatclient;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,14 +19,19 @@ public class GeneralChatChatClientConfig {
     private ModelConfig model;
 
     @Bean("generalChatChatClient")
-    public ChatClient chatClient(ChatClient.Builder builder) {
+    public ChatClient chatClient(ChatClient.Builder builder,
+                                 MessageChatMemoryAdvisor chatMemoryAdvisor) {
         DashScopeChatOptions options = DashScopeChatOptions.builder()
                 .withModel(model.getName())
                 .withTemperature(model.getTemperature())
                 .withTopP(model.getTopP())
                 .withMaxToken(model.getMaxTokens())
                 .build();
-        return builder.defaultSystem(prompt).defaultOptions(options).build();
+        return builder
+                .defaultSystem(prompt)
+                .defaultAdvisors(chatMemoryAdvisor)
+                .defaultOptions(options)
+                .build();
     }
 
     @Data

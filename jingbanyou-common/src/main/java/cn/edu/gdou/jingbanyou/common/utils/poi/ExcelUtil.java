@@ -365,7 +365,7 @@ public class ExcelUtil<T>
         {
             throw new IOException("文件sheet不存在");
         }
-        boolean isXSSFWorkbook = !(wb instanceof HSSFWorkbook);
+        boolean isXSSFWorkbook = wb instanceof XSSFWorkbook;
         Map<String, List<PictureData>> pictures = null;
         if (isXSSFWorkbook)
         {

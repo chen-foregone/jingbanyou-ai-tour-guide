@@ -82,6 +82,16 @@ spring:
             servers-configuration: classpath:/mcp-servers-config.json # 指定 MCP 服务的配置文件路径
           toolcallback:
             enabled: true # 开启 MCP 客户端的工具回调（Tool Callback）功能
+      # Spring AI 官方 Redis ChatMemory Repository 配置
+      # 注意：ChatMemoryConfig 中手动创建 RedisChatMemoryRepository Bean，覆盖自动配置
+      chat:
+        memory:
+          repository:
+            redis:
+              host: localhost
+              port: 6380
+              key-prefix: "chat:memory:"
+              time-to-live: "24h"
 
   jackson:
     time-zone: GMT+8

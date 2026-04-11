@@ -39,17 +39,15 @@ public class GraphConfiguration {
 
     // 声明所有节点
     @Autowired
-    private DistinguishNode distinguishNode;
+    private TextDistinguishNode textDistinguishNode;
+    @Autowired
+    private MultimodalDistinguishNode multimodalDistinguishNode;
     @Autowired
     private FaqAnswerPolishNode faqAnswerPolishNode;
     @Autowired
     private GeneralChatFallbackNode generalChatFallbackNode;
     @Autowired
     private MapRouteApiInvokerNode mapRouteApiInvokerNode;
-    @Autowired
-    private MemoryLoaderNode memoryLoaderNode;
-    @Autowired
-    private MemoryUpdaterNode memoryUpdaterNode;
     @Autowired
     private ProfileLoaderNode profileLoaderNode;
     @Autowired
@@ -67,51 +65,75 @@ public class GraphConfiguration {
         StateGraph stateGraph = new StateGraph();
 
         // 添加所有节点
-        stateGraph.addNode(DISTINGUISH, AsyncNodeAction.node_async(distinguishNode));
+        stateGraph.addNode(TEXT_DISTINGUISH, AsyncNodeAction.node_async(textDistinguishNode));
+        stateGraph.addNode(MULTIMODAL_DISTINGUISH, AsyncNodeAction.node_async(multimodalDistinguishNode));
         stateGraph.addNode(FAQ_ANSWER_POLISH, AsyncNodeAction.node_async(faqAnswerPolishNode));
         stateGraph.addNode(GENERAL_CHAT_FALLBACK, AsyncNodeAction.node_async(generalChatFallbackNode));
         stateGraph.addNode(MAP_ROUTE_API_INVOKER, AsyncNodeAction.node_async(mapRouteApiInvokerNode));
-        stateGraph.addNode(MEMORY_LOADER, AsyncNodeAction.node_async(memoryLoaderNode));
-        stateGraph.addNode(MEMORY_UPDATER, AsyncNodeAction.node_async(memoryUpdaterNode));
         stateGraph.addNode(PROFILE_LOADER, AsyncNodeAction.node_async(profileLoaderNode));
         stateGraph.addNode(PROFILE_UPDATER, AsyncNodeAction.node_async(profileUpdaterNode));
         stateGraph.addNode(ROUTE_POLISH, AsyncNodeAction.node_async(routePolishNode));
         stateGraph.addNode(SCENIC_KNOWLEDGE_ANSWER_GENERATOR, AsyncNodeAction.node_async(scenicKnowledgeAnswerGeneratorNode));
         stateGraph.addNode(SCENIC_KNOWLEDGE_RETRIEVAL, AsyncNodeAction.node_async(scenicKnowledgeRetrievalNode));
 
-        // 添加边：START → MemoryLoader → ProfileLoader → Distinguish
-        stateGraph.addEdge(StateGraph.START, MEMORY_LOADER);
-        stateGraph.addEdge(MEMORY_LOADER, PROFILE_LOADER);
-        stateGraph.addEdge(PROFILE_LOADER, DISTINGUISH);
+        // 添加边：START → ProfileLoader
+        stateGraph.addEdge(StateGraph.START, PROFILE_LOADER);
 
-        // 意图识别后的条件路由
-        stateGraph.addConditionalEdges(DISTINGUISH, new AsyncEdgeAction() {
+        // ProfileLoader → 条件路由：audioData 存在 → 多模态，否则 → 纯文本
+        stateGraph.addConditionalEdges(PROFILE_LOADER, new AsyncEdgeAction() {
+            @Override
+            public CompletableFuture<String> apply(OverAllState state) {
+                byte[] audioData = state.value(GraphStateKey.AUDIO_DATA, byte[].class).orElse(null);
+                return CompletableFuture.completedFuture(
+                        audioData != null ? MULTIMODAL_DISTINGUISH : TEXT_DISTINGUISH);
+            }
+        }, Map.of(
+                TEXT_DISTINGUISH, TEXT_DISTINGUISH,
+                MULTIMODAL_DISTINGUISH, MULTIMODAL_DISTINGUISH
+        ));
+
+        // 意图识别后的条件路由（两个分支都走同一个逻辑）
+        stateGraph.addConditionalEdges(TEXT_DISTINGUISH, intentRouter(), intentRoutingMap());
+        stateGraph.addConditionalEdges(MULTIMODAL_DISTINGUISH, intentRouter(), intentRoutingMap());
+
+        // 路线规划路径：API调用 → 润色 → 画像更新 → 结束
+        stateGraph.addEdge(MAP_ROUTE_API_INVOKER, ROUTE_POLISH);
+        stateGraph.addEdge(ROUTE_POLISH, PROFILE_UPDATER);
+        stateGraph.addEdge(PROFILE_UPDATER, StateGraph.END);
+
+        // 景区问答路径：检索 → 生成答案 → 画像更新 → 结束
+        stateGraph.addEdge(SCENIC_KNOWLEDGE_RETRIEVAL, SCENIC_KNOWLEDGE_ANSWER_GENERATOR);
+        stateGraph.addEdge(SCENIC_KNOWLEDGE_ANSWER_GENERATOR, PROFILE_UPDATER);
+        stateGraph.addEdge(PROFILE_UPDATER, StateGraph.END);
+
+        // 闲聊兜底路径：闲聊 → 画像更新 → 结束
+        stateGraph.addEdge(GENERAL_CHAT_FALLBACK, PROFILE_UPDATER);
+        stateGraph.addEdge(PROFILE_UPDATER, StateGraph.END);
+
+        return stateGraph.compile();
+    }
+
+    /**
+     * 意图路由：读取 INTENT 值
+     */
+    private AsyncEdgeAction intentRouter() {
+        return new AsyncEdgeAction() {
             @Override
             public CompletableFuture<String> apply(OverAllState state) {
                 return CompletableFuture.completedFuture(
                         state.value(GraphStateKey.INTENT).orElse("").toString());
             }
-        }, Map.of(
+        };
+    }
+
+    /**
+     * 意图 → 下一节点映射
+     */
+    private Map<String, String> intentRoutingMap() {
+        return Map.of(
                 INTENT_ROUTE_PLAN, MAP_ROUTE_API_INVOKER,
                 INTENT_SPOT_QUESTION, SCENIC_KNOWLEDGE_RETRIEVAL,
                 INTENT_COMPLEX_OTHER, GENERAL_CHAT_FALLBACK
-        ));
-
-        // 路线规划路径：API调用 → 润色 → 画像更新 → 记忆更新 → 结束
-        stateGraph.addEdge(MAP_ROUTE_API_INVOKER, ROUTE_POLISH);
-        stateGraph.addEdge(ROUTE_POLISH, PROFILE_UPDATER);
-        stateGraph.addEdge(PROFILE_UPDATER, MEMORY_UPDATER);
-        stateGraph.addEdge(MEMORY_UPDATER, StateGraph.END);
-
-        // 景区问答路径：检索 → 生成答案 → 画像更新 → 记忆更新 → 结束
-        stateGraph.addEdge(SCENIC_KNOWLEDGE_RETRIEVAL, SCENIC_KNOWLEDGE_ANSWER_GENERATOR);
-        stateGraph.addEdge(SCENIC_KNOWLEDGE_ANSWER_GENERATOR, PROFILE_UPDATER);
-        stateGraph.addEdge(PROFILE_UPDATER, MEMORY_UPDATER);
-
-        // 闲聊兜底路径：闲聊 → 画像更新 → 记忆更新 → 结束
-        stateGraph.addEdge(GENERAL_CHAT_FALLBACK, PROFILE_UPDATER);
-        stateGraph.addEdge(PROFILE_UPDATER, MEMORY_UPDATER);
-
-        return stateGraph.compile();
+        );
     }
 }

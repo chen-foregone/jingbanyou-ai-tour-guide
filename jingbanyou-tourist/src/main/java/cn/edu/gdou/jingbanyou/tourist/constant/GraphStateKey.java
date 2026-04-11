@@ -56,7 +56,7 @@ public final class GraphStateKey {
      * 意图分类结果
      * 类型：String
      * 可选值：route_plan / spot_question / complex_other
-     * 来源：DistinguishNode
+     * 来源：TextDistinguishNode / MultimodalDistinguishNode
      */
     public static final String INTENT = "intent";
     
@@ -163,6 +163,19 @@ public final class GraphStateKey {
     public static final String TOKENS_USED = "tokensUsed";
 
     // ==================== 用户画像相关 ====================
+
+    /**
+     * 语言（zh/en）
+     * 类型：String
+     */
+    public static final String LANGUAGE = "language";
+
+    /**
+     * 音频数据（Controller 层注入）
+     * 类型：byte[]
+     * 来源：ChatController / WebSocket
+     */
+    public static final String AUDIO_DATA = "audioData";
 
     /**
      * 游客唯一标识，由前端 WebSocket/HTTP 传入

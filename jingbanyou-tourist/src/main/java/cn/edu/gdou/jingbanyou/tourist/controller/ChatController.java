@@ -2,6 +2,7 @@ package cn.edu.gdou.jingbanyou.tourist.controller;
 
 import cn.edu.gdou.jingbanyou.tourist.graph.GraphConfiguration;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
+import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +20,11 @@ import java.util.Map;
 public class ChatController {
 
     private final GraphConfiguration graphConfiguration;
+    private final ChatMemoryService chatMemoryService;
 
     /**
      * 音频 + 文字 交互
-     * 音频直接传入 Graph，第一个节点（DistinguishNode）使用多模态模型处理
+     * 音频直接传入 Graph，ProfileLoader 根据 audioData 路由到 MultimodalDistinguishNode
      *
      * @param audio     语音文件（multipart）
      * @param text      游客输入的文字（可选，优先级高于音频）
@@ -49,9 +51,9 @@ public class ChatController {
                 initialState.put(GraphStateKey.SCENIC_ID, scenicId);
             }
 
-            // 如果有音频，将音频数据注入 State（DistinguishNode 会处理）
+            // 如果有音频，将音频数据注入 State（ProfileLoader → 条件路由 → MultimodalDistinguishNode）
             if (audio != null) {
-                initialState.put("audioData", audio.getBytes());
+                initialState.put(GraphStateKey.AUDIO_DATA, audio.getBytes());
                 log.info("接收到音频，大小={} bytes, 类型={}", audio.getSize(), audio.getContentType());
             }
 
@@ -111,5 +113,20 @@ public class ChatController {
             log.error("Graph 执行失败", e);
             return Map.of("code", 500, "msg", "处理失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 对话结束：前端页面离开时调用
+     * 将 Redis 中的对话历史异步批量持久化到 MySQL VisitorInteraction 表
+     */
+    @PostMapping("/end")
+    public Map<String, Object> endChat(
+            @RequestParam("sessionId") String sessionId,
+            @RequestParam(value = "scenicId", required = false) Long scenicId,
+            @RequestParam(value = "visitorId", required = false) String visitorId
+    ) {
+        log.info("收到对话结束请求，sessionId={}", sessionId);
+        chatMemoryService.syncToMySQL(sessionId, scenicId, visitorId);
+        return Map.of("code", 200, "msg", "对话已结束");
     }
 }

@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 /**
  * 画像加载节点
- * 位置：START → ProfileLoaderNode → DistinguishNode → ...
+ * 位置：START → ProfileLoaderNode → (条件路由) → TextDistinguishNode / MultimodalDistinguishNode
  * 逻辑：
  *   1. 从 Redis 读取历史画像，无则初始化空画像
  *   2. 从向量库检索相似历史偏好（如用户说"上次那个有花的地方"）

@@ -27,14 +27,22 @@ package cn.edu.gdou.jingbanyou.tourist.constant;
 public final class GraphNodeNames {
     
     // ==================== 意图识别相关 ====================
-    
+
     /**
-     * 问题分类器节点（意图识别）
-     * 功能：将用户问题分为 route_plan / spot_question / complex_other 三类
+     * 意图分类器 — 纯文本路径
+     * 功能：将纯文本问题分为 route_plan / spot_question / complex_other 三类
      * 输入：QUESTION
      * 输出：INTENT
      */
-    public static final String DISTINGUISH = "distinguish";
+    public static final String TEXT_DISTINGUISH = "textDistinguish";
+
+    /**
+     * 意图分类器 — 多模态路径（音频 + 文字）
+     * 功能：从音频中提取问题并分类意图
+     * 输入：QUESTION, AUDIO_DATA
+     * 输出：INTENT
+     */
+    public static final String MULTIMODAL_DISTINGUISH = "multimodalDistinguish";
     
     // ==================== 路线规划相关 ====================
     
@@ -109,26 +117,6 @@ public final class GraphNodeNames {
      * 注意：异步写入 Redis（TTL 24h）
      */
     public static final String PROFILE_UPDATER = "profileUpdater";
-
-    // ==================== 对话记忆相关 ====================
-
-    /**
-     * 对话记忆加载节点
-     * 功能：从 Redis ChatMemory 加载最近 N 轮对话历史，注入到 State
-     * 输入：SESSION_ID, QUESTION
-     * 输出：HISTORY
-     * 位置：START → MemoryLoader → ProfileLoader → Distinguish
-     */
-    public static final String MEMORY_LOADER = "memoryLoader";
-
-    /**
-     * 对话记忆更新节点（Graph 出口）
-     * 功能：将 AI 回复写入 Redis ChatMemory，持久化到 MySQL VisitorInteraction
-     * 输入：SESSION_ID, QUESTION, ANSWER
-     * 输出：（无，仅副作用）
-     * 位置：ProfileUpdater → MemoryUpdater → END
-     */
-    public static final String MEMORY_UPDATER = "memoryUpdater";
     
     // ==================== 特殊节点 ====================
     

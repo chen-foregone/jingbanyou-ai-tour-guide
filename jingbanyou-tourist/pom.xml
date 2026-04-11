@@ -15,6 +15,27 @@
     <name>jingbanyou-tourist</name>
     <description>游客交互端 - AI数字人对话、RAG检索、多模态交互、个性化推荐</description>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring AI Alibaba BOM（包含 memory-redis 等基础组件） -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring AI BOM（包含 redis-store、jdbc-chat-memory-repository 等 Spring AI 组件） -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
 
         <!-- 管理后台 Entity（景区、FAQ、知识库等实体） -->
@@ -67,10 +88,24 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Redis（对话记忆缓存，由 spring-ai-redis-spring-boot-starter 引入） -->
+
+        <!-- Spring AI Alibaba Redis ChatMemory Repository（热缓存，Redis Stack 6380） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-memory-redis</artifactId>
+        </dependency>
+
+        <!-- Spring AI JDBC ChatMemory Repository（冷存储，MySQL 持久化） -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-redis-spring-boot-starter</artifactId>
+            <artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
+        </dependency>
+
+        <!-- MySQL JDBC 驱动（ChatMemory 持久化需要） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- 测试 -->
@@ -78,10 +113,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-graph-core</artifactId>
         </dependency>
 
     </dependencies>
