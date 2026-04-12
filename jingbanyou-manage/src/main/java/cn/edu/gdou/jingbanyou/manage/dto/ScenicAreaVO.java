@@ -63,12 +63,5 @@ public class ScenicAreaVO implements Serializable
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
 
-    /**
-     * scenicId 别名，供前台接口直接使用
-     * 前端期望字段名为 scenicId，不改原有 id 字段以兼容管理端
-     */
-    public Long getScenicId() {
-        return id;
-    }
 }
 
