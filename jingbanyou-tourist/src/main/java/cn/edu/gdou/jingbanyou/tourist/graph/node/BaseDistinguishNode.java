@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,7 @@ import java.util.Map;
  * <p>子类只需实现 getSystemPrompt() 返回 system prompt（ChatClient 已注入 Advisor）
  */
 @Slf4j
-public abstract class BaseDistinguishNode {
+public abstract class BaseDistinguishNode implements NodeAction {
 
     protected final ChatClient chatClient;
     protected final ObjectMapper objectMapper = new ObjectMapper();

@@ -2,7 +2,7 @@ package cn.edu.gdou.jingbanyou.tourist.service;
 
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorInteraction;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper;
-import com.alibaba.cloud.ai.memory.redis.RedisChatMemoryRepository;
+import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChatMemoryService {
 
-    private final RedisChatMemoryRepository chatMemoryRepository;
+    private final JedisRedisChatMemoryRepository chatMemoryRepository;
     private final VisitorInteractionMapper visitorInteractionMapper;
 
     /**
@@ -31,7 +31,7 @@ public class ChatMemoryService {
     public void syncToMySQL(String sessionId, Long scenicId, String visitorId) {
         try {
             // 从 Redis 读取全部历史消息（lastN=-1 表示全部）
-            List<Message> msgs = chatMemoryRepository.get(sessionId, -1);
+            List<Message> msgs = chatMemoryRepository.findByConversationId(sessionId);
             if (msgs == null || msgs.isEmpty()) return;
 
             // 每 user+assistant 配对 → 一条 VisitorInteraction
@@ -48,7 +48,7 @@ public class ChatMemoryService {
                 }
             }
             // 清除 Redis 缓存
-            chatMemoryRepository.clear(sessionId);
+            chatMemoryRepository.deleteByConversationId(sessionId);
             log.info("对话已同步到 MySQL 并清除 Redis，sessionId={}", sessionId);
         } catch (Exception e) {
             log.error("同步对话到 MySQL 失败，sessionId={}", sessionId, e);

@@ -59,7 +59,8 @@ public class ChatController {
 
             // 执行 Graph
             CompiledGraph graph = graphConfiguration.compiledGraph();
-            OverAllState result = graph.invoke(initialState);
+            OverAllState result = graph.invoke(initialState).orElseThrow(
+                    () -> new RuntimeException("Graph execution returned no result"));
 
             return Map.of(
                     "code", 200,
@@ -99,7 +100,8 @@ public class ChatController {
             }
 
             CompiledGraph graph = graphConfiguration.compiledGraph();
-            OverAllState result = graph.invoke(initialState);
+            OverAllState result = graph.invoke(initialState).orElseThrow(
+                    () -> new RuntimeException("Graph execution returned no result"));
 
             return Map.of(
                     "code", 200,

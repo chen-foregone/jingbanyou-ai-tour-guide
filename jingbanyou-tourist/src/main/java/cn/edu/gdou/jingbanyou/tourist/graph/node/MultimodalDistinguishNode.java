@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.content.Media;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MimeType;
 
 import java.util.Map;
 
@@ -68,10 +70,10 @@ public class MultimodalDistinguishNode extends BaseDistinguishNode {
         return chatClient.prompt()
                 .user(userSpec -> userSpec
                         .text(userText)
-                        .media(new org.springframework.ai.content.Media(
-                                org.springframework.ai.content.Media.MimeTypeUtils.parseMediaType("audio/wav"),
-                                audioData
-                        )))
+                        .media(Media.builder()
+                        .mimeType(MimeType.valueOf("audio/wav"))
+                        .data(audioData)
+                        .build()))
                 .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
                 .call()
                 .content();

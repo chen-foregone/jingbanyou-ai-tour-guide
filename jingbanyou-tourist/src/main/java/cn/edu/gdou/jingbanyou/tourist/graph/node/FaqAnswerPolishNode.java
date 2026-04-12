@@ -2,7 +2,7 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
-import cn.edu.gdou.jingbanyou.manage.config.FaqVectorStoreConfig;
+import cn.edu.gdou.jingbanyou.common.config.FaqVectorStoreConfig;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;

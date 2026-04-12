@@ -1,6 +1,6 @@
 package cn.edu.gdou.jingbanyou.tourist.config;
 
-import com.alibaba.cloud.ai.memory.redis.RedisChatMemoryRepository;
+import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
@@ -9,11 +9,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 对话记忆配置（基于 Spring AI Alibaba RedisChatMemoryRepository + Redis Stack）
+ * 对话记忆配置（基于 Spring AI Alibaba JedisRedisChatMemoryRepository + Redis Stack）
  *
- * <p>使用 spring-ai-alibaba-starter-memory-redis 提供的 RedisChatMemoryRepository
+ * <p>使用 spring-ai-alibaba-starter-memory-redis 提供的 JedisRedisChatMemoryRepository
  * <p>手动创建 Bean 指向 Redis Stack（6380），避免与自动配置冲突
  * <p>Redis 连接参数：host=localhost, port=6380（前缀=chat:memory:）
+ * <p>TTL 通过 application.yml 的 spring.ai.memory.redis.time-to-live 配置
  */
 @Configuration
 public class ChatMemoryConfig {
@@ -24,20 +25,17 @@ public class ChatMemoryConfig {
     @Value("${redis.vectorstore.port:6380}")
     private int redisPort;
 
-    @Value("${chat.memory.ttl-hours:24}")
-    private int ttlHours;
-
     /**
      * RedisChatMemoryRepository：官方实现，连接 Redis Stack（6380）
      * 手动创建以覆盖自动配置的默认 Redis（6379）连接
+     * TTL 通过 application.yml 的 spring.ai.memory.redis.time-to-live 配置
      */
     @Bean
-    public RedisChatMemoryRepository redisChatMemoryRepository() {
-        return RedisChatMemoryRepository.builder()
+    public JedisRedisChatMemoryRepository redisChatMemoryRepository() {
+        return JedisRedisChatMemoryRepository.builder()
                 .host(redisHost)
                 .port(redisPort)
                 .keyPrefix("chat:memory:")
-                .ttl(java.time.Duration.ofHours(ttlHours))
                 .build();
     }
 
@@ -45,7 +43,7 @@ public class ChatMemoryConfig {
      * MessageWindowChatMemory：限制上下文窗口大小（默认保留最近 20 条消息）
      */
     @Bean
-    public ChatMemory chatMemory(RedisChatMemoryRepository redisChatMemoryRepository) {
+    public ChatMemory chatMemory(JedisRedisChatMemoryRepository redisChatMemoryRepository) {
         return MessageWindowChatMemory.builder()
                 .chatMemoryRepository(redisChatMemoryRepository)
                 .maxMessages(20)

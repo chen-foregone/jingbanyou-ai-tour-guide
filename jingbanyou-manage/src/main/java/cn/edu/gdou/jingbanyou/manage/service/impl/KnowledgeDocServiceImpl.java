@@ -12,6 +12,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
     private KnowledgeChunkMapper knowledgeChunkMapper;
 
     @Autowired
+    @Qualifier("knowledgeVectorStore")
     private VectorStore knowledgeVectorStore;
 
     /** Embedding 模型版本（从配置读取） */
