@@ -1,13 +1,15 @@
 package cn.edu.gdou.jingbanyou.tourist.service;
 
+import com.alibaba.cloud.ai.dashscope.audio.transcription.DashScopeAudioTranscriptionOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.audio.transcription.AudioTranscriptionModel;
+import com.alibaba.cloud.ai.dashscope.audio.transcription.AudioTranscriptionModel;
 import org.springframework.ai.audio.transcription.AudioTranscriptionPrompt;
 import org.springframework.ai.audio.transcription.AudioTranscriptionResponse;
-import org.springframework.ai.dashscope.api.DashScopeAudioTranscriptionOptions;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
 
 /**
  * ASR 语音转文字服务
@@ -49,7 +51,7 @@ public class TranscribeService {
             // 构建转写选项
             DashScopeAudioTranscriptionOptions options = DashScopeAudioTranscriptionOptions.builder()
                     .model(MODEL_PARAFORMER_V1)
-                    .languageHints(language != null ? language : "zh")
+                    .languageHints(Collections.singletonList(language != null ? language : "zh"))
                     .punctuationPredictionEnabled(true)
                     .disfluencyRemovalEnabled(true)
                     .build();

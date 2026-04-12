@@ -35,7 +35,7 @@
         <spring-ai-alibaba.version>1.1.2.2</spring-ai-alibaba.version>
         <spring-ai.version>1.1.2</spring-ai.version>
         <spring-ai-alibaba-extensions.version>1.1.2.1</spring-ai-alibaba-extensions.version>
-        <x-file-storage.version>3.1.0</x-file-storage.version>
+        <x-file-storage.version>2.3.0</x-file-storage.version>
     </properties>
 
     <!-- 依赖声明 -->
@@ -261,8 +261,13 @@
 
             <!-- dromara 文件存储（支持阿里云 OSS） -->
             <dependency>
-                <groupId>com.x-file-storage</groupId>
-                <artifactId>x-file-storage</artifactId>
+                <groupId>org.dromara.x-file-storage</groupId>
+                <artifactId>x-file-storage-core</artifactId>
+                <version>${x-file-storage.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.dromara.x-file-storage</groupId>
+                <artifactId>x-file-storage-spring</artifactId>
                 <version>${x-file-storage.version}</version>
             </dependency>
 
@@ -318,6 +323,12 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
+        </repository>
+        <!-- Maven 中央库（阿里云镜像没有 dromara 的 x-file-storage） -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo1.maven.org/maven2</url>
         </repository>
     </repositories>
 

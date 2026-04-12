@@ -1,16 +1,18 @@
 package cn.edu.gdou.jingbanyou;
 
+import org.dromara.x.file.storage.spring.EnableFileStorage;
+import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
 
 /**
  * 启动程序
  *
  * @author ruoyi
  */
+@EnableFileStorage
 @SpringBootApplication(exclude = { DataSourceAutoConfiguration.class, MybatisAutoConfiguration.class })
 @EnableAsync
 public class RuoYiApplication

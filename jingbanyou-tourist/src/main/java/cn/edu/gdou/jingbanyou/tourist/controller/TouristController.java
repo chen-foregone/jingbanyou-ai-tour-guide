@@ -101,8 +101,8 @@ public class TouristController extends BaseController {
             OverAllState result = graph.invoke(initialState)
                     .orElseThrow(() -> new RuntimeException("Graph 执行返回空结果"));
 
-            String answer = result.value(GraphStateKey.ANSWER).orElse("");
-            String intent = result.value(GraphStateKey.INTENT).orElse("");
+            String answer = (String) result.value(GraphStateKey.ANSWER).orElse("");
+            String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
 
             // 构造回复结构
             String replyId = "assistant-" + System.currentTimeMillis();

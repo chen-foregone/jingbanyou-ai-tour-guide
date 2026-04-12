@@ -1,15 +1,15 @@
 package cn.edu.gdou.jingbanyou.tourist.service;
 
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
+import com.alibaba.cloud.ai.dashscope.audio.tts.DashScopeAudioSpeechOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.dashscope.api.DashScopeAudioSpeechApi;
-import org.springframework.ai.dashscope.api.DashScopeAudioSpeechOptions;
-import org.springframework.ai.texttotpeech.TextToSpeechModel;
-import org.springframework.ai.texttotpeech.TextToSpeechPrompt;
-import org.springframework.ai.texttotpeech.TextToSpeechResponse;
+import org.dromara.x.file.storage.core.FileInfo;
+import org.dromara.x.file.storage.core.FileStorageService;
+import org.springframework.ai.audio.tts.TextToSpeechModel;
+import org.springframework.ai.audio.tts.TextToSpeechPrompt;
+import org.springframework.ai.audio.tts.TextToSpeechResponse;
 import org.springframework.stereotype.Service;
-import platform.publisher.FileStoragePublisher;
 
 /**
  * TTS 语音合成服务
@@ -22,7 +22,7 @@ import platform.publisher.FileStoragePublisher;
 public class TtsService {
 
     private final TextToSpeechModel textToSpeechModel;
-    private final FileStoragePublisher fileStoragePublisher;
+    private final FileStorageService fileStorageService;
 
     /**
      * 将文本合成为语音，返回 OSS 访问 URL
@@ -73,7 +73,7 @@ public class TtsService {
     private DashScopeAudioSpeechOptions buildOptions(DigitalHumanConfig digitalHuman) {
         DashScopeAudioSpeechOptions.Builder builder = DashScopeAudioSpeechOptions.builder()
                 .model("cosyvoice-v1")
-                .responseFormat(DashScopeAudioSpeechApi.ResponseFormat.MP3)
+                .format("mp3")
                 .speed(1.0)
                 .sampleRate(22050);
 
@@ -95,12 +95,11 @@ public class TtsService {
      * @return OSS 访问 URL
      */
     private String uploadToOss(byte[] data, String fileName, String mimeType) {
-        // x-file-storage 自动使用配置的 aliyun-oss-1 平台
-        String url = fileStoragePublisher.of(data)
-                .setObjectKey(fileName)
+        // x-file-storage 2.1.0: FileStorageService.of() returns UploadPretreatment
+        FileInfo fileInfo = fileStorageService.of(data)
+                .setPath(fileName)
                 .setContentType(mimeType)
                 .upload();
-
-        return url != null ? url : "";
+        return fileInfo != null ? fileInfo.getUrl() : "";
     }
 }
