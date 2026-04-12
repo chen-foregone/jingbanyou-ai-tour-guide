@@ -145,6 +145,7 @@ public class DataImportScript implements CommandLineRunner {
         ScenicArea scenic = new ScenicArea();
         scenic.setScenicName(name);
         scenic.setScenicDesc(desc);
+        scenic.setScenicAddress(name + "地址");
         scenic.setStatus(1);
         scenic.setSort(0);
         scenic.setCreateTime(new Date());
@@ -472,8 +473,9 @@ public class DataImportScript implements CommandLineRunner {
                 List<XWPFTableRow> rows = table.getRows();
                 if (rows.size() < 2) continue;
 
-                XWPFTableRow headerRow = rows.get(0);
-                String scenicName = getCellTextSafe(headerRow, 0).trim();
+                // 景区名在第一行数据中（表头行的第一个单元格是"景区名称"，需跳过）
+                XWPFTableRow firstDataRow = rows.get(1);
+                String scenicName = getCellTextSafe(firstDataRow, 0).trim();
 
                 Long scenicId;
                 if (scenicName.contains("灵山")) {
@@ -488,7 +490,8 @@ public class DataImportScript implements CommandLineRunner {
                 for (int i = 1; i < rows.size(); i++) {
                     XWPFTableRow row = rows.get(i);
                     String spotName = getCellTextSafe(row, 2).trim();
-                    if (spotName.isEmpty()) continue;
+                    // 跳过表头行
+                    if (spotName.isEmpty() || spotName.equals("景点名称")) continue;
 
                     // ScenicSpot 入库（去重）
                     if (!insertedSpotNames.contains(spotName)) {

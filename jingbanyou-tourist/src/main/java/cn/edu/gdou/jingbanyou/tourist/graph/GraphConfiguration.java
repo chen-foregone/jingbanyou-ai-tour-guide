@@ -100,12 +100,10 @@ public class GraphConfiguration {
         // 路线规划路径：API调用 → 润色 → 画像更新 → 结束
         stateGraph.addEdge(MAP_ROUTE_API_INVOKER, ROUTE_POLISH);
         stateGraph.addEdge(ROUTE_POLISH, PROFILE_UPDATER);
-        stateGraph.addEdge(PROFILE_UPDATER, StateGraph.END);
 
         // 景区问答路径：检索 → 生成答案 → 画像更新 → 结束
         stateGraph.addEdge(SCENIC_KNOWLEDGE_RETRIEVAL, SCENIC_KNOWLEDGE_ANSWER_GENERATOR);
         stateGraph.addEdge(SCENIC_KNOWLEDGE_ANSWER_GENERATOR, PROFILE_UPDATER);
-        stateGraph.addEdge(PROFILE_UPDATER, StateGraph.END);
 
         // 闲聊兜底路径：闲聊 → 画像更新 → 结束
         stateGraph.addEdge(GENERAL_CHAT_FALLBACK, PROFILE_UPDATER);

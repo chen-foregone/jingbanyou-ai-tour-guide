@@ -7,6 +7,8 @@ import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.redis.RedisVectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -20,10 +22,10 @@ import java.util.Map;
 @Component
 public class ScenicKnowledgeRetrievalNode implements NodeAction {
 
-    private final RedisVectorStore redisVectorStore;
+    private final VectorStore vectorStore;
 
-    public ScenicKnowledgeRetrievalNode(RedisVectorStore redisVectorStore) {
-        this.redisVectorStore = redisVectorStore;
+    public ScenicKnowledgeRetrievalNode(@Qualifier("knowledgeVectorStore") VectorStore vectorStore) {
+        this.vectorStore = vectorStore;
     }
 
     @Override
@@ -38,7 +40,7 @@ public class ScenicKnowledgeRetrievalNode implements NodeAction {
                 .filterExpression("scenicId == '" + scenicId + "'")
                 .build();
 
-        List<Document> documents = redisVectorStore.doSimilaritySearch(request);
+        List<Document> documents = ((RedisVectorStore) vectorStore).doSimilaritySearch(request);
 
         StringBuilder sb = new StringBuilder();
         for (Document document : documents) {

@@ -18,7 +18,7 @@ import java.util.Date;
  */
 @Data
 @ToString
-@TableName("scenic_spot")
+@TableName("manage_scenic_spot")
 public class ScenicSpot implements Serializable {
 
     private static final long serialVersionUID = 1L;

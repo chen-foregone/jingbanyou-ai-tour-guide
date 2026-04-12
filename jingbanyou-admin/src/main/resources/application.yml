@@ -132,11 +132,11 @@ spring:
           # #连接池最大阻塞等待时间（使用负值表示没有限制）
           max-wait: -1ms
 
-# Redis Stack 向量检索（独立端口 6380，与 Spring Data Redis 分离）
+# Redis Stack 向量检索（Redis Stack 镜像只有6379端口，RediSearch模块已加载）
 redis:
   vectorstore:
     host: localhost
-    port: 6380
+    port: 6379
 
 # token配置
 token:
