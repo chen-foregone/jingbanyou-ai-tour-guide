@@ -24,30 +24,86 @@
 
 ## 二、游客端接口（jingbanyou-tourist）
 
-**基础路径：** `/tourist`
+**基础路径：** `/api/tourist`
 
 **认证说明：** 游客端接口无需登录，属于公开接口。
 
 ---
 
-### 2.1 游客对话
+### 2.1 首屏初始化
 
-#### POST `/tourist/chat/text` — 文字对话
+#### GET `/api/tourist/bootstrap` — 前台首屏初始化数据
 
-**功能描述：** 游客发送文字消息，AI 导游基于 LangGraph 图执行 RAG 检索并返回回答。
+**功能描述：** 获取景区信息、数字人配置、欢迎语，用于前端页面初始化。
 
 **请求参数：**
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| `text` | String | 是 | 游客输入的文字 |
+| `scenicId` | Long | 是 | 景区 ID（Query） |
+
+**响应示例：**
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "scenic": {
+      "id": 1,
+      "scenicName": "白云山风景区",
+      "scenicAddress": "广东省广州市白云区",
+      "scenicDesc": "...",
+      "openTime": "08:00-18:00",
+      "ticketInfo": "门票60元",
+      "contactPhone": "020-12345678",
+      "coverImage": "https://...",
+      "topFeatures": ["智能导览", "AI讲解"],
+      "quickPrompts": ["开放时间", "门票价格", "推荐路线"],
+      "starLevel": "5A",
+      "status": 1,
+      "createTime": "2026-04-01 10:00:00"
+    },
+    "digitalHuman": {
+      "id": 1,
+      "scenicId": 1,
+      "humanName": "小景",
+      "avatarImage": "https://...",
+      "defaultGreeting": "欢迎来到白云山...",
+      "modelJsonUrl": "https://...",
+      "ttsVoiceCode": "longhua",
+      "sampleAudioUrl": "https://..."
+    },
+    "conversation": [
+      {
+        "id": "assistant-welcome",
+        "role": "assistant",
+        "content": "欢迎来到白云山风景区，我是您的专属 AI 导游..."
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 2.2 对话
+
+#### POST `/api/tourist/chat` — 文字对话
+
+**功能描述：** 游客发送文字消息，AI 导游基于 LangGraph 执行 RAG 检索并返回回答，同时合成语音。
+
+**请求体（application/json）：**
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| `message` | String | 是 | 游客输入的文字 |
 | `sessionId` | String | 是 | 会话 ID，用于多轮对话上下文 |
 | `scenicId` | Long | 否 | 景区 ID |
 
 **请求示例：**
 ```json
 {
-  "text": "这个景点的开放时间是几点？",
+  "message": "这个景点的开放时间是几点？",
   "sessionId": "sess_abc123",
   "scenicId": 1
 }
@@ -59,8 +115,16 @@
   "code": 200,
   "msg": "success",
   "data": {
-    "answer": "该景点开放时间为 08:00-18:00...",
-    "intent": "knowledge_query"
+    "reply": {
+      "id": "assistant-1712345678900",
+      "role": "assistant",
+      "content": "该景点开放时间为 08:00-18:00...",
+      "attachments": []
+    },
+    "intent": "spot_question",
+    "voice": {
+      "audioUrl": "https://java-ai-c-z-h.oss-cn-beijing.aliyuncs.com/dkd-images/tts/sess_abc123/1712345678900.mp3"
+    }
   }
 }
 ```
@@ -69,26 +133,50 @@
 
 | intent | 含义 |
 |--------|------|
-| `knowledge_query` | 景点知识查询 |
-| `faq_query` | FAQ 问答匹配 |
 | `route_plan` | 路线规划请求 |
-| `general_chat` | 闲聊兜底 |
+| `spot_question` | 景点知识查询 |
+| `complex_other` | 闲聊兜底 |
+
+**intent=route_plan 时的 attachments 结构：**
+
+```json
+{
+  "attachments": [
+    {
+      "id": "routes-1712345678900",
+      "type": "routes",
+      "eyebrow": "路线推荐",
+      "title": "为您推荐以下游览路线",
+      "meta": "3 条路线",
+      "items": [
+        {
+          "id": "route-0",
+          "title": "精华路线",
+          "summary": "适合：家庭出游 | 提示：建议上午出发",
+          "duration": "约3小时",
+          "tags": ["家庭出游", "经典打卡"]
+        }
+      ]
+    }
+  ]
+}
+```
 
 ---
 
-#### POST `/tourist/chat/audio` — 语音/多模态对话
+### 2.3 语音合成
 
-**功能描述：** 支持音频文件（Voice）输入的对话接口，音频经 ASR 转文字后走与文字对话相同的 Graph 流程。
+#### POST `/api/tourist/tts` — 文字转语音（TTS）
 
-**请求参数（`multipart/form-data`）：**
+**功能描述：** 将文本合成为 MP3 音频，上传至阿里云 OSS，返回访问 URL。
+
+**请求参数：**
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| `audio` | File | 否 | 语音文件 |
-| `text` | String | 否 | 文字（优先级高于音频，两者都有时以文字为准） |
-| `sessionId` | String | 是 | 会话 ID |
-| `language` | String | 否 | 语言，默认 `zh`（支持 `en`） |
-| `scenicId` | Long | 否 | 景区 ID |
+| `text` | String | 是 | 要合成的文本（Query） |
+| `scenicId` | Long | 是 | 景区 ID（用于获取数字人音色配置，Query） |
+| `sessionId` | String | 是 | 会话 ID（用于生成文件名，Query） |
 
 **响应示例：**
 ```json
@@ -96,31 +184,38 @@
   "code": 200,
   "msg": "success",
   "data": {
-    "answer": "欢迎来到我们的景区...",
-    "intent": "general_chat"
+    "audioUrl": "https://java-ai-c-z-h.oss-cn-beijing.aliyuncs.com/dkd-images/tts/sess_abc123/1712345678900.mp3"
   }
 }
 ```
 
+**OSS 存储路径：** `dkd-images/tts/{sessionId}/{timestamp}.mp3`
+
 ---
 
-#### POST `/tourist/chat/end` — 结束对话
+### 2.4 语音识别
 
-**功能描述：** 前端页面离开时调用，将 Redis 中的对话历史异步批量持久化到 MySQL `VisitorInteraction` 表。
+#### POST `/api/tourist/voice/transcribe` — 语音转文字（ASR）
+
+**功能描述：** 将音频文件识别为文字，使用 DashScope Paraformer 模型。
+
+**Content-Type：** `multipart/form-data`
 
 **请求参数：**
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| `sessionId` | String | 是 | 会话 ID |
-| `scenicId` | Long | 否 | 景区 ID |
-| `visitorId` | String | 否 | 游客标识 |
+| `file` | File | 是 | 音频文件（支持 mp3/wav/m4a/aac，MultipartFile） |
+| `language` | String | 否 | 语言提示，默认 `zh`（Query） |
 
 **响应示例：**
 ```json
 {
   "code": 200,
-  "msg": "对话已结束"
+  "msg": "success",
+  "data": {
+    "text": "我想了解一下这个景点的开放时间"
+  }
 }
 ```
 
@@ -142,7 +237,9 @@
 
 #### GET `/manage/scenic/list` — 景区列表（分页）
 
-**响应字段（ScenicArea）：**
+> 注意：列表和详情接口返回的是 `ScenicAreaVO`，不是 `ScenicArea`。
+
+**响应字段（ScenicAreaVO）：**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -153,25 +250,40 @@
 | `openTime` | String | 开放时间 |
 | `ticketInfo` | String | 门票信息 |
 | `contactPhone` | String | 联系电话 |
-| `officialWebsite` | String | 官网 |
 | `coverImage` | String | 封面图 URL |
 | `topFeatures` | List\<String\> | 功能亮点文案 |
 | `quickPrompts` | List\<String\> | 快捷提问文案 |
 | `starLevel` | String | 等级，如 5A |
 | `status` | Integer | 状态 0-禁用 1-启用 |
-| `sort` | Integer | 排序权重 |
-| `createTime` | Date | 创建时间 |
-| `updateTime` | Date | 更新时间 |
+| `createTime` | Date | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
 
 ---
 
 #### GET `/manage/scenic/{id}` — 查询单个景区
 
+> 返回 `ScenicAreaVO`，字段同上。
+
 #### POST `/manage/scenic` — 新增景区
-
-**请求体：** `ScenicArea` 实体字段（id 不传，由数据库自增）
-
 #### PUT `/manage/scenic` — 修改景区
+
+**请求体（ScenicArea）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | Long | 条件 | 景区 ID，更新时必填 |
+| `scenicName` | String | 是 | 景区名称 |
+| `scenicAddress` | String | 是 | 景区地址 |
+| `scenicDesc` | String | 否 | 景区总体介绍 |
+| `openTime` | String | 否 | 开放时间 |
+| `ticketInfo` | String | 否 | 门票信息 |
+| `contactPhone` | String | 否 | 联系电话 |
+| `officialWebsite` | String | 否 | 官方网站 |
+| `coverImage` | String | 否 | 封面图 URL |
+| `topFeatures` | List\<String\> | 否 | 功能亮点文案数组 |
+| `quickPrompts` | List\<String\> | 否 | 快捷提问文案数组 |
+| `starLevel` | String | 否 | 景区等级，如 5A |
+| `status` | Integer | 否 | 状态 0-禁用 1-启用 |
+| `sort` | Integer | 否 | 排序权重 |
 
 #### DELETE `/manage/scenic/{id}` — 删除景区
 
@@ -226,6 +338,19 @@
 #### GET `/manage/knowledge/{id}` — 查询知识文档
 #### POST `/manage/knowledge` — 新增知识文档
 #### PUT `/manage/knowledge` — 修改知识文档
+
+**请求体（KnowledgeDocRequest）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | Long | 条件 | 文档 ID，更新时必填 |
+| `scenicId` | Long | 是 | 所属景区 ID |
+| `docTitle` | String | 是 | 文档标题 |
+| `docType` | String | 是 | 类型：讲解词/文史资料/攻略/公告 |
+| `docContent` | String | 是 | 文档内容 |
+| `docSummary` | String | 否 | 文档摘要 |
+| `status` | Integer | 否 | 状态 0-禁用 1-启用 |
+
 #### DELETE `/manage/knowledge/{id}` — 删除知识文档（同步清理 Redis 向量 + MySQL chunk）
 
 #### POST `/manage/knowledge/{id}/vectorize` — 单文档向量化（RAG）
@@ -262,6 +387,8 @@
 | `vectorId` | String | 向量 ID |
 | `similarityThreshold` | Double | 相似度阈值 |
 | `status` | Integer | 状态 0-禁用 1-启用 |
+| `createTime` | Date | 创建时间，格式 `yyyy-MM-dd HH:mm:ss` |
+| `updateTime` | Date | 更新时间，格式 `yyyy-MM-dd HH:mm:ss` |
 
 ---
 
@@ -269,6 +396,21 @@
 #### POST `/manage/faq` — 新增 FAQ（自动触发向量化和 FAQ RAG）
 #### PUT `/manage/faq` — 修改 FAQ（自动重新向量化）
 #### DELETE `/manage/faq/{id}` — 删除 FAQ
+
+**POST/PUT 请求体（Faq）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | Long | 条件 | FAQ ID，更新时必填 |
+| `scenicId` | Long | 是 | 所属景区 ID |
+| `question` | String | 是 | 用户问题 |
+| `questionKeywords` | String | 否 | 问题关键词 |
+| `answer` | String | 是 | 回答内容 |
+| `answerType` | String | 否 | 回答类型：text/rich/html |
+| `spotId` | Long | 否 | 关联景点 ID |
+| `similarQuestions` | String | 否 | 相似问法（JSON 数组） |
+| `similarityThreshold` | Double | 否 | 相似度阈值 |
+| `status` | Integer | 否 | 状态 0-禁用 1-启用 |
 
 #### GET `/manage/faq/match` — 智能匹配相似问题（RAG 检索）
 
@@ -322,13 +464,38 @@
 #### GET `/manage/digital-human/{id}` — 查询数字人详情
 #### POST `/manage/digital-human` — 新增数字人配置
 #### PUT `/manage/digital-human` — 修改数字人配置
+
+**请求体（DigitalHumanConfig）：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | Long | 条件 | 配置 ID，更新时必填 |
+| `scenicId` | Long | 是 | 所属景区 ID |
+| `humanName` | String | 是 | 数字人名称 |
+| `avatarImage` | String | 否 | 人物头像 URL |
+| `defaultGreeting` | String | 否 | 默认问候语 |
+| `modelJsonUrl` | String | 是 | Live2D 模型 .model3.json 地址（前端加载模型必须） |
+| `landscapeHeight` | BigDecimal | 否 | 横屏模型显示高度 |
+| `portraitHeight` | BigDecimal | 否 | 竖屏模型显示高度 |
+| `scaleX` | BigDecimal | 否 | X 方向缩放 |
+| `offsetX` | BigDecimal | 否 | X 方向偏移 |
+| `offsetY` | BigDecimal | 否 | Y 方向偏移 |
+| `idleMotionGroup` | String | 否 | 空闲动作组名 |
+| `tapMotionGroup` | String | 否 | 点击动作组名 |
+| `ttsVoiceCode` | String | 否 | TTS 音色代码 |
+| `sampleAudioUrl` | String | 否 | 音色试听音频地址 |
+| `appearanceConfig` | String | 否 | 外观扩展配置（JSON） |
+| `voiceConfig` | String | 否 | 语音合成扩展参数（JSON） |
+| `lipSync` | Integer | 否 | 口型同步 0-关闭 1-开启 |
+| `isDefault` | Integer | 否 | 是否默认 0-否 1-是 |
+
 #### DELETE `/manage/digital-human/{id}` — 删除数字人配置
 #### GET `/manage/digital-human/scenic/{scenicId}/default` — 获取景区默认数字人
 #### POST `/manage/digital-human/{id}/set-default` — 设置默认数字人
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `scenicId` | Long | 是 | 景区 ID |
+| `scenicId` | Long | 是 | 景区 ID（Query） |
 
 ---
 
@@ -357,11 +524,13 @@
 
 #### POST `/manage/stats/generate` — 手动触发统计任务
 
+> 注意：参数通过 **Query 参数**传递，不是 Request Body。
+
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `scenicId` | Long | 是 | 景区 ID |
-| `date` | String | 是 | 日期，格式 `yyyy-MM-dd` |
-| `type` | String | 否 | 统计类型，默认 `daily` |
+| `scenicId` | Long | 是 | 景区 ID（Query） |
+| `date` | String | 是 | 日期，格式 `yyyy-MM-dd`（Query） |
+| `type` | String | 否 | 统计类型，默认 `daily`（Query） |
 
 ---
 
@@ -394,7 +563,7 @@
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `scenicId` | Long | 是 | 景区 ID |
-| `date` | LocalDate | 是 | 日期，格式 `yyyy-MM-dd` |
+| `date` | LocalDate | 是 | 日期，格式 `yyyy-MM-dd`，使用 `@DateTimeFormat` 注解解析 |
 
 #### GET `/manage/analysis/{id}` — 查看历史分析报告
 

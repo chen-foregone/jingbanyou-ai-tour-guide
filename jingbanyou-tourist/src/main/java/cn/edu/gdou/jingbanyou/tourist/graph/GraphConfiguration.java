@@ -7,6 +7,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.action.AsyncEdgeAction;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
+import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -37,27 +38,27 @@ public class GraphConfiguration {
      */
     public static final String INTENT_COMPLEX_OTHER = "complex_other";
 
-    // 声明所有节点
+    // 声明所有节点（注入接口类型，兼容 @Async 代理）
     @Autowired
-    private TextDistinguishNode textDistinguishNode;
+    private NodeAction textDistinguishNode;
     @Autowired
-    private MultimodalDistinguishNode multimodalDistinguishNode;
+    private NodeAction multimodalDistinguishNode;
     @Autowired
-    private FaqAnswerPolishNode faqAnswerPolishNode;
+    private NodeAction faqAnswerPolishNode;
     @Autowired
-    private GeneralChatFallbackNode generalChatFallbackNode;
+    private NodeAction generalChatFallbackNode;
     @Autowired
-    private MapRouteApiInvokerNode mapRouteApiInvokerNode;
+    private NodeAction mapRouteApiInvokerNode;
     @Autowired
-    private ProfileLoaderNode profileLoaderNode;
+    private NodeAction profileLoaderNode;
     @Autowired
-    private ProfileUpdaterNode profileUpdaterNode;
+    private NodeAction profileUpdaterNode;
     @Autowired
-    private RoutePolishNode routePolishNode;
+    private NodeAction routePolishNode;
     @Autowired
-    private ScenicKnowledgeAnswerGeneratorNode scenicKnowledgeAnswerGeneratorNode;
+    private NodeAction scenicKnowledgeAnswerGeneratorNode;
     @Autowired
-    private ScenicKnowledgeRetrievalNode scenicKnowledgeRetrievalNode;
+    private NodeAction scenicKnowledgeRetrievalNode;
 
     // 绘制图
     @Bean

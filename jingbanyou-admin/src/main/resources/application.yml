@@ -89,6 +89,16 @@ spring:
             servers-configuration: classpath:/mcp-servers-config.json # 指定 MCP 服务的配置文件路径
           toolcallback:
             enabled: true # 开启 MCP 客户端的工具回调（Tool Callback）功能
+      audio:
+        speech:
+          # 使用通义语音合成模型 cosyvoice-v1
+          model: cosyvoice-v1
+          # 默认音色（可被 DigitalHumanConfig.ttsVoiceCode 覆盖）
+          options:
+            voice: longxia
+            response-format: mp3
+            speed: 1.0
+            sample-rate: 22050
 
   jackson:
     time-zone: GMT+8
@@ -189,4 +199,28 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+# dromara 文件存储（阿里云 OSS）
+dromara:
+  x-file-storage:
+    # 默认存储平台
+    default-platform: aliyun-oss-1
+    # 缩略图后缀
+    thumbnail-suffix: ".min.jpg"
+    # 阿里云 OSS 配置
+    aliyun-oss:
+      - platform: aliyun-oss-1
+        # OSS 内网接入点（Java SDK 自动识别并优先使用同地域内网地址）
+        endpoint: oss-cn-beijing.aliyuncs.com
+        # 访问凭证（从环境变量读取，保证密钥安全）
+        access-key: ${ALIYUN_OSS_ACCESS_KEY:}
+        secret-key: ${ALIYUN_OSS_SECRET_KEY:}
+        # Bucket 配置
+        bucket-name: java-ai-c-z-h
+        # 访问域名（用于拼接文件 URL）
+        domain: https://java-ai-c-z-h.oss-cn-beijing.aliyuncs.com
+        # OSS 内网 endpoint（Java SDK 会根据 bucket 地域自动选择）
+        internal: false
+        # 文件基础路径
+        base-path: dkd-images/
 

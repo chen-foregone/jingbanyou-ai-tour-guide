@@ -108,6 +108,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- dromara 文件存储（阿里云 OSS） -->
+        <dependency>
+            <groupId>com.x-file-storage</groupId>
+            <artifactId>x-file-storage</artifactId>
+        </dependency>
+
         <!-- 测试 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
