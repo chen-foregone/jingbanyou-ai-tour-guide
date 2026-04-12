@@ -8,6 +8,7 @@ import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.GraphConfiguration;
+import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
 import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
 import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
 import cn.hutool.core.bean.BeanUtil;
@@ -39,6 +40,7 @@ public class TouristController extends BaseController {
     private final GraphConfiguration graphConfiguration;
     private final TtsService ttsService;
     private final TranscribeService transcribeService;
+    private final ChatMemoryService chatMemoryService;
 
     /**
      * GET /api/tourist/bootstrap
@@ -256,5 +258,20 @@ public class TouristController extends BaseController {
             log.error("ASR 处理失败", e);
             return error("语音识别失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * POST /api/tourist/chat/end
+     * 前端页面离开时调用，触发对话历史异步持久化到 MySQL
+     */
+    @PostMapping("/chat/end")
+    public AjaxResult endChat(@RequestParam String sessionId,
+                              @RequestParam Long scenicId,
+                              @RequestParam(required = false) String visitorId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return error("sessionId 不能为空");
+        }
+        chatMemoryService.syncToMySQL(sessionId, scenicId, visitorId);
+        return success("会话已保存");
     }
 }

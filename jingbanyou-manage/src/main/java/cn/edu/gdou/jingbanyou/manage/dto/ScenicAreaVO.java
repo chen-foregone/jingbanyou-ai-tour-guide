@@ -67,7 +67,6 @@ public class ScenicAreaVO implements Serializable
      * scenicId 别名，供前台接口直接使用
      * 前端期望字段名为 scenicId，不改原有 id 字段以兼容管理端
      */
-    @com.fasterxml.jackson.annotation.JsonIgnore
     public Long getScenicId() {
         return id;
     }
