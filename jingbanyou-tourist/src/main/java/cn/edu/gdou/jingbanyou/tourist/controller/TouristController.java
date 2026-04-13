@@ -47,7 +47,11 @@ public class TouristController extends BaseController {
      * @return 景区信息、数字人配置、欢迎语
      */
     @GetMapping("/bootstrap")
-    public AjaxResult bootstrap(@RequestParam Long scenicId) {
+    public AjaxResult bootstrap(@RequestParam(required = false) Long scenicId) {
+        if (scenicId == null) {
+            return error("景区ID不能为空");
+        }
+        
         ScenicAreaVO scenic = BeanUtil.copyProperties(
                 scenicAreaService.getById(scenicId), ScenicAreaVO.class);
         if (scenic == null) {
@@ -89,6 +93,7 @@ public class TouristController extends BaseController {
         String sessionId = (String) request.get("sessionId");
         Long scenicId = request.get("scenicId") != null
                 ? ((Number) request.get("scenicId")).longValue() : null;
+        log.info("[Chat入口] scenicId={}, requestBody={}", scenicId, request);
 
         if (message == null || message.isBlank()) {
             return error("消息内容不能为空");

@@ -61,21 +61,27 @@ public class HybridRetrievalNode implements NodeAction {
         }
         log.info("[混合检索] FAQ检索到 {} 条", faqDocs.size());
 
-        // 2. 查询景区知识向量库
+        // 2. 查询景区知识向量库（调试：先不加过滤，看能否检索到数据）
         SearchRequest.Builder kbBuilder = SearchRequest.builder()
                 .query(question)
                 .topK(3)
-                .similarityThreshold(0.4);
+                .similarityThreshold(0.3);
         if (scenicId != null && scenicId > 0) {
             kbBuilder.filterExpression("scenicId == " + scenicId);
+            log.info("[混合检索] 使用 scenicId={} 进行过滤检索", scenicId);
+        } else {
+            log.info("[混合检索] scenicId 无效（{}），跳过过滤，检索全部数据", scenicId);
         }
         List<Document> kbDocs = knowledgeVectorStore.similaritySearch(kbBuilder.build());
 
         StringBuilder kbContext = new StringBuilder();
         for (int i = 0; i < kbDocs.size(); i++) {
-            kbContext.append("景区知识").append(i + 1).append(": ").append(kbDocs.get(i).getText()).append("\n");
+            Document doc = kbDocs.get(i);
+            kbContext.append("景区知识").append(i + 1).append(": ").append(doc.getText()).append("\n");
+            log.debug("[混合检索] 知识库结果{}: content前50字={}", i,
+                    doc.getText().substring(0, Math.min(50, doc.getText().length())));
         }
-        log.info("[混合检索] 知识库检索到 {} 条", kbDocs.size());
+        log.info("[混合检索] 知识库检索到 {} 条（阈值=0.3）", kbDocs.size());
 
         // 3. 合并上下文，一次 LLM 生成
         String userText;

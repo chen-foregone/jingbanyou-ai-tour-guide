@@ -4,15 +4,19 @@ import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.node.*;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.KeyStrategy;
+import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.action.AsyncEdgeAction;
 import com.alibaba.cloud.ai.graph.action.AsyncNodeAction;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
+import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -57,7 +61,20 @@ public class GraphConfiguration {
     // 绘制图
     @Bean
     public CompiledGraph compiledGraph() throws GraphStateException {
-        StateGraph stateGraph = new StateGraph();
+        // 注册所有输入 key，确保 OverAllState.input() 能正确写入这些值
+        KeyStrategyFactory keyStrategyFactory = () -> {
+            HashMap<String, KeyStrategy> strategies = new HashMap<>();
+            strategies.put(GraphStateKey.SCENIC_ID, new ReplaceStrategy());
+            strategies.put(GraphStateKey.SESSION_ID, new ReplaceStrategy());
+            strategies.put(GraphStateKey.QUESTION, new ReplaceStrategy());
+            strategies.put(GraphStateKey.HISTORY, new ReplaceStrategy());
+            strategies.put(GraphStateKey.LANGUAGE, new ReplaceStrategy());
+            strategies.put(GraphStateKey.VISITOR_ID, new ReplaceStrategy());
+            strategies.put(GraphStateKey.AUDIO_DATA, new ReplaceStrategy());
+            return strategies;
+        };
+
+        StateGraph stateGraph = new StateGraph(keyStrategyFactory);
 
         // 添加所有节点
         stateGraph.addNode(TEXT_DISTINGUISH, AsyncNodeAction.node_async(textDistinguishNode));
