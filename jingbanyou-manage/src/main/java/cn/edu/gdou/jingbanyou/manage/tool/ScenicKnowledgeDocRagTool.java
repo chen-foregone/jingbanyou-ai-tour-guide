@@ -99,9 +99,15 @@ public class ScenicKnowledgeDocRagTool {
         return results;
     }
 
-    public record DocChunkResult(
-            String docTitle,    // 文档标题
-            String docType,    // 文档类型
-            String content      // 内容片段
-    ) {}
+    public static class DocChunkResult {
+        public final String docTitle;
+        public final String docType;
+        public final String content;
+
+        public DocChunkResult(String docTitle, String docType, String content) {
+            this.docTitle = docTitle;
+            this.docType = docType;
+            this.content = content;
+        }
+    }
 }

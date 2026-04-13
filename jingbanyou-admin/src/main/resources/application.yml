@@ -17,6 +17,8 @@ ruoyi:
 server:
   # 服务器的HTTP端口，默认为8080
   port: 8081
+  # 监听所有网卡，允许内网其他机器访问
+  address: 0.0.0.0
   servlet:
     # 应用的访问路径
     context-path: /

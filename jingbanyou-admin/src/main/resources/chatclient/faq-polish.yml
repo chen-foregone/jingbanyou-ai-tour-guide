@@ -15,7 +15,7 @@ jingbanyou:
         游客问题：{question}
         FAQ 标准答案：{faq_answer}
       model:
-        name: qwen3.5-flash
+        name: qwen-turbo
         temperature: 0.3
         topP: 0.85
         maxTokens: 256

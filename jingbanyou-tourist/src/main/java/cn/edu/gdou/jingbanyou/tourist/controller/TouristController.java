@@ -1,5 +1,6 @@
 package cn.edu.gdou.jingbanyou.tourist.controller;
 
+import cn.edu.gdou.jingbanyou.common.annotation.Anonymous;
 import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.manage.dto.ScenicAreaVO;
@@ -33,6 +34,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/tourist")
 @RequiredArgsConstructor
+@Anonymous
 public class TouristController extends BaseController {
 
     private final IScenicAreaService scenicAreaService;
@@ -56,19 +58,20 @@ public class TouristController extends BaseController {
 
         DigitalHumanConfig digitalHuman = digitalHumanConfigService.getDefaultByScenicId(scenicId);
 
-        List<Map<String, String>> conversation = List.of(Map.of(
+        String greeting = (digitalHuman != null && digitalHuman.getDefaultGreeting() != null)
+                ? digitalHuman.getDefaultGreeting()
+                : "欢迎来到" + scenic.getScenicName() + "，我是您的专属 AI 导游，可以为您介绍景点、规划路线、解答疑问。";
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("scenic", scenic);
+        result.put("digitalHuman", digitalHuman);
+        result.put("conversation", List.of(Map.of(
                 "id", "assistant-welcome",
                 "role", "assistant",
-                "content", digitalHuman != null && digitalHuman.getDefaultGreeting() != null
-                        ? digitalHuman.getDefaultGreeting()
-                        : "欢迎来到" + scenic.getScenicName() + "，我是您的专属 AI 导游，可以为您介绍景点、规划路线、解答疑问。"
-        ));
+                "content", greeting
+        )));
 
-        return success(Map.of(
-                "scenic", scenic,
-                "digitalHuman", digitalHuman,
-                "conversation", conversation
-        ));
+        return success(result);
     }
 
     /**
@@ -210,9 +213,11 @@ public class TouristController extends BaseController {
      * @param sessionId 会话 ID
      */
     @PostMapping("/tts")
-    public AjaxResult tts(@RequestParam String text,
-                          @RequestParam Long scenicId,
-                          @RequestParam String sessionId) {
+    public AjaxResult tts(@RequestBody Map<String, Object> request) {
+        String text = (String) request.get("text");
+        Object scenicIdObj = request.get("scenicId");
+        String sessionId = (String) request.get("sessionId");
+
         if (text == null || text.isBlank()) {
             return error("文本内容不能为空");
         }
@@ -220,10 +225,17 @@ public class TouristController extends BaseController {
             return error("sessionId 不能为空");
         }
 
-        DigitalHumanConfig digitalHuman = digitalHumanConfigService.getDefaultByScenicId(scenicId);
+        DigitalHumanConfig digitalHuman = null;
+        if (scenicIdObj != null) {
+            Long scenicId = scenicIdObj instanceof Number
+                    ? ((Number) scenicIdObj).longValue()
+                    : Long.parseLong(scenicIdObj.toString());
+            digitalHuman = digitalHumanConfigService.getDefaultByScenicId(scenicId);
+        }
+
         String audioUrl = ttsService.synthesize(text, sessionId, digitalHuman);
 
-        if (audioUrl.isEmpty()) {
+        if (audioUrl == null || audioUrl.isEmpty()) {
             return error("语音合成失败");
         }
 
@@ -265,12 +277,22 @@ public class TouristController extends BaseController {
      * 前端页面离开时调用，触发对话历史异步持久化到 MySQL
      */
     @PostMapping("/chat/end")
-    public AjaxResult endChat(@RequestParam String sessionId,
-                              @RequestParam Long scenicId,
-                              @RequestParam(required = false) String visitorId) {
+    public AjaxResult endChat(@RequestBody Map<String, Object> request) {
+        String sessionId = (String) request.get("sessionId");
+        Object scenicIdObj = request.get("scenicId");
+        String visitorId = (String) request.get("visitorId");
+
         if (sessionId == null || sessionId.isBlank()) {
             return error("sessionId 不能为空");
         }
+
+        Long scenicId = null;
+        if (scenicIdObj != null) {
+            scenicId = scenicIdObj instanceof Number
+                    ? ((Number) scenicIdObj).longValue()
+                    : Long.parseLong(scenicIdObj.toString());
+        }
+
         chatMemoryService.syncToMySQL(sessionId, scenicId, visitorId);
         return success("会话已保存");
     }

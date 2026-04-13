@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 知识库文档 Service 实现类
@@ -130,7 +131,7 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         List<String> oldVectorIds = oldChunks.stream()
                 .map(KnowledgeChunk::getVectorId)
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(Collectors.toList());
 
         // 删 MySQL chunk 记录
         knowledgeChunkMapper.delete(

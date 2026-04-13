@@ -42,9 +42,15 @@ public class ScenicFaqRagTool {
         return new FaqResult(faq.getQuestion(), faq.getAnswer(), null);
     }
 
-    public record FaqResult(
-            String matchedQuestion,
-            String standardAnswer,
-            String errorMessage
-    ) {}
+    public static class FaqResult {
+        public final String matchedQuestion;
+        public final String standardAnswer;
+        public final String errorMessage;
+
+        public FaqResult(String matchedQuestion, String standardAnswer, String errorMessage) {
+            this.matchedQuestion = matchedQuestion;
+            this.standardAnswer = standardAnswer;
+            this.errorMessage = errorMessage;
+        }
+    }
 }
