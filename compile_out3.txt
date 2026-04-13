@@ -1,0 +1,97 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] jingbanyou                                                         [pom]
+[INFO] jingbanyou-common                                                  [jar]
+[INFO] jingbanyou-system                                                  [jar]
+[INFO] jingbanyou-framework                                               [jar]
+[INFO] jingbanyou-manage                                                  [jar]
+[INFO] jingbanyou-tourist                                                 [jar]
+[INFO] 
+[INFO] -----------------------< cn.edu.gdou:jingbanyou >-----------------------
+[INFO] Building jingbanyou 3.9.2                                          [1/6]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] -------------------< cn.edu.gdou:jingbanyou-common >--------------------
+[INFO] Building jingbanyou-common 3.9.2                                   [2/6]
+[INFO]   from jingbanyou-common\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ jingbanyou-common ---
+[INFO] skip non existing resourceDirectory C:\Users\c1342\IdeaProjects\20260402154946\jingbanyou-ai-tour-guide\jingbanyou-common\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jingbanyou-common ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] -------------------< cn.edu.gdou:jingbanyou-system >--------------------
+[INFO] Building jingbanyou-system 3.9.2                                   [3/6]
+[INFO]   from jingbanyou-system\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ jingbanyou-system ---
+[INFO] Copying 16 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jingbanyou-system ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] ------------------< cn.edu.gdou:jingbanyou-framework >------------------
+[INFO] Building jingbanyou-framework 3.9.2                                [4/6]
+[INFO]   from jingbanyou-framework\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ jingbanyou-framework ---
+[INFO] skip non existing resourceDirectory C:\Users\c1342\IdeaProjects\20260402154946\jingbanyou-ai-tour-guide\jingbanyou-framework\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jingbanyou-framework ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] -------------------< cn.edu.gdou:jingbanyou-manage >--------------------
+[INFO] Building jingbanyou-manage 3.9.2                                   [5/6]
+[INFO]   from jingbanyou-manage\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ jingbanyou-manage ---
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jingbanyou-manage ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 51 source files with javac [debug parameters target 15] to target\classes
+[WARNING] 未与 -source 15 一起设置系统模块路径
+[INFO] 
+[INFO] -------------------< cn.edu.gdou:jingbanyou-tourist >-------------------
+[INFO] Building jingbanyou-tourist 3.9.2                                  [6/6]
+[INFO]   from jingbanyou-tourist\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ jingbanyou-tourist ---
+[INFO] skip non existing resourceDirectory C:\Users\c1342\IdeaProjects\20260402154946\jingbanyou-ai-tour-guide\jingbanyou-tourist\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jingbanyou-tourist ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 29 source files with javac [debug parameters target 17] to target\classes
+[INFO] /C:/Users/c1342/IdeaProjects/20260402154946/jingbanyou-ai-tour-guide/jingbanyou-tourist/src/main/java/cn/edu/gdou/jingbanyou/tourist/config/chatclient/DistinguishChatClientConfig.java: 某些输入文件使用或覆盖了已过时的 API。
+[INFO] /C:/Users/c1342/IdeaProjects/20260402154946/jingbanyou-ai-tour-guide/jingbanyou-tourist/src/main/java/cn/edu/gdou/jingbanyou/tourist/config/chatclient/DistinguishChatClientConfig.java: 有关详细信息, 请使用 -Xlint:deprecation 重新编译。
+[INFO] /C:/Users/c1342/IdeaProjects/20260402154946/jingbanyou-ai-tour-guide/jingbanyou-tourist/src/main/java/cn/edu/gdou/jingbanyou/tourist/graph/node/RoutePolishNode.java: C:\Users\c1342\IdeaProjects\20260402154946\jingbanyou-ai-tour-guide\jingbanyou-tourist\src\main\java\cn\edu\gdou\jingbanyou\tourist\graph\node\RoutePolishNode.java使用了未经检查或不安全的操作。
+[INFO] /C:/Users/c1342/IdeaProjects/20260402154946/jingbanyou-ai-tour-guide/jingbanyou-tourist/src/main/java/cn/edu/gdou/jingbanyou/tourist/graph/node/RoutePolishNode.java: 有关详细信息, 请使用 -Xlint:unchecked 重新编译。
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for jingbanyou 3.9.2:
+[INFO] 
+[INFO] jingbanyou ......................................... SUCCESS [  0.005 s]
+[INFO] jingbanyou-common .................................. SUCCESS [  3.962 s]
+[INFO] jingbanyou-system .................................. SUCCESS [  0.746 s]
+[INFO] jingbanyou-framework ............................... SUCCESS [  1.473 s]
+[INFO] jingbanyou-manage .................................. SUCCESS [ 12.251 s]
+[INFO] jingbanyou-tourist ................................. SUCCESS [  8.785 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  27.931 s
+[INFO] Finished at: 2026-04-13T15:08:04+08:00
+[INFO] ------------------------------------------------------------------------

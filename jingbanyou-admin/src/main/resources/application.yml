@@ -68,7 +68,7 @@ spring:
     import: classpath:chatclient/hybrid-retrieval.yml,classpath:chatclient/route-polish.yml,classpath:chatclient/profile-update.yml,classpath:chatclient/map-route-invoker.yml,classpath:chatclient/general-chat.yml,classpath:chatclient/distinguish.yml
   ai:
     dashscope:
-      api-key: ${DASHSCOPE_API_KEY:sk-25a0e981c714438e85fe067faaf64295}
+      api-key: ${DASHSCOPE_API_KEY:}
       chat:
         options:
           model: qwen-turbo
@@ -145,7 +145,7 @@ token:
   # 令牌自定义标识
   header: Authorization
   # 令牌密钥
-  secret: abcdefghijklmnopqrstuvwxyz
+  secret: ${JWT_SECRET:}
   # 令牌有效期（默认30分钟）
   expireTime: 30
 

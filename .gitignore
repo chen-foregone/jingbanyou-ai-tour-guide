@@ -46,3 +46,14 @@ nbdist/
 !*/build/*.html
 !*/build/*.xml
 /docs/后台管理API接口文档.md
+
+######################################################################
+# Sensitive Configuration (DO NOT commit these)
+
+# 本地数据库配置（不上 Git）
+application-druid.yml
+
+# 本地环境变量文件
+.env
+.env.local
+.env.*.local
