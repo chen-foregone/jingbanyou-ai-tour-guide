@@ -15,7 +15,7 @@ package cn.edu.gdou.jingbanyou.tourist.constant;
  *     edgeRouter,
  *     Map.of(
  *         "route_plan", GraphNodeNames.MAP_ROUTE_API_INVOKER,
- *         "spot_question", GraphNodeNames.SCENIC_KNOWLEDGE_RETRIEVAL,
+ *         "spot_question", GraphNodeNames.HYBRID_RETRIEVAL,
  *         "complex_other", GraphNodeNames.GENERAL_CHAT_FALLBACK
  *     )
  * );
@@ -63,31 +63,14 @@ public final class GraphNodeNames {
     public static final String ROUTE_POLISH = "routePolish";
     
     // ==================== 知识问答相关 ====================
-    
+
     /**
-     * 景区知识检索节点（RAG 检索）
-     * 功能：从向量数据库中检索与问题相关的景区知识文档
+     * 混合检索节点
+     * 功能：FAQ 和景区知识库并行检索，一次 LLM 生成答案
      * 输入：QUESTION, SCENIC_ID
-     * 输出：RETRIEVED_DOCS
-     */
-    public static final String SCENIC_KNOWLEDGE_RETRIEVAL = "scenicKnowledgeRetrieval";
-    
-    /**
-     * 知识库答案生成节点
-     * 功能：基于检索到的知识文档，生成详细、准确的景点介绍/导览词
-     * 输入：QUESTION, RETRIEVED_DOCS, HISTORY
      * 输出：ANSWER
      */
-    public static final String SCENIC_KNOWLEDGE_ANSWER_GENERATOR = "scenicKnowledgeAnswerGenerator";
-    
-    /**
-     * FAQ 答案润色节点
-     * 功能：将 FAQ 库的标准答案润色为更亲切的 AI 数字人语气
-     * 输入：QUESTION, FAQ_ANSWER
-     * 输出：ANSWER
-     * 注意：暂时禁用，等待配置完善后启用
-     */
-    public static final String FAQ_ANSWER_POLISH = "faqAnswerPolish";
+    public static final String HYBRID_RETRIEVAL = "hybridRetrieval";
     
     // ==================== 通用聊天相关 ====================
     

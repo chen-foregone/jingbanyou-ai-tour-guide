@@ -12,8 +12,6 @@ import redis.clients.jedis.search.FTCreateParams;
 import redis.clients.jedis.search.IndexDataType;
 import redis.clients.jedis.search.schemafields.TextField;
 
-import java.util.List;
-
 /**
  * 景区知识库 Redis 向量检索配置
  * 与 FAQ 向量库分离，使用独立索引 doc-index
@@ -26,13 +24,13 @@ public class KnowledgeVectorStoreConfig {
     @Value("${redis.vectorstore.host:localhost}")
     private String redisHost;
 
-    @Value("${redis.vectorstore.port:6380}")
+    @Value("${redis.vectorstore.port:6379}")
     private int redisPort;
 
     @Bean
     public VectorStore knowledgeVectorStore(EmbeddingModel embeddingModel) {
         JedisPooled jedis = new JedisPooled(redisHost, redisPort);
-        tryCreateIndex(jedis, "doc-index", "doc:", "content");
+        createIndexIfNotExists(jedis);
         return RedisVectorStore.builder(jedis, embeddingModel)
                 .indexName("doc-index")
                 .prefix("doc:")
@@ -40,26 +38,31 @@ public class KnowledgeVectorStoreConfig {
                 .build();
     }
 
-    private void tryCreateIndex(JedisPooled jedis, String indexName, String prefix, String... textFields) {
+    private void createIndexIfNotExists(JedisPooled jedis) {
         try {
-            jedis.ftInfo(indexName);
-            log.info("索引 {} 已存在，跳过创建", indexName);
+            jedis.ftInfo("doc-index");
+            log.info("doc-index 索引已存在");
         } catch (Exception e) {
+            log.info("doc-index 索引不存在，创建中...");
             try {
-                TextField[] fields = new TextField[textFields.length];
-                for (int i = 0; i < textFields.length; i++) {
-                    fields[i] = TextField.of(textFields[i]);
-                }
-                FTCreateParams params = FTCreateParams.createParams()
-                        .on(IndexDataType.HASH)
-                        .addPrefix(prefix);
-                jedis.ftCreate(indexName, params, List.of(fields));
-                log.info("索引 {} 创建成功", indexName);
+                jedis.ftCreate("doc-index", FTCreateParams.createParams()
+                        .on(IndexDataType.JSON)
+                        .addPrefix("doc:"),
+                        TextField.of("content"),
+                        TextField.of("scenicId"),
+                        TextField.of("docId"),
+                        TextField.of("docTitle"),
+                        TextField.of("chunkIndex"),
+                        TextField.of("embedding"),
+                        TextField.of("parent_document_id"),
+                        TextField.of("total_chunks"),
+                        TextField.of("chunk_index"));
+                log.info("doc-index 索引创建成功");
             } catch (Exception createEx) {
                 if (createEx.getMessage() != null && createEx.getMessage().contains("ALREADY")) {
-                    log.info("索引 {} 已存在，跳过创建", indexName);
+                    log.info("doc-index 索引已存在");
                 } else {
-                    log.warn("创建索引 {} 失败: {}", indexName, createEx.getMessage());
+                    log.warn("创建 doc-index 索引失败: {}", createEx.getMessage());
                 }
             }
         }

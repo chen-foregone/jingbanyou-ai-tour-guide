@@ -95,21 +95,15 @@ public final class GraphStateKey {
     /**
      * 检索到的知识文档
      * 类型：String（JSON 数组格式）
-     * 来源：ScenicKnowledgeRetrievalNode
+     * 来源：HybridRetrievalNode（内部使用，不对外暴露）
      */
     public static final String RETRIEVED_DOCS = "retrievedDocs";
     
-    /**
-     * FAQ 标准答案
-     * 类型：String
-     * 来源：FAQ 数据库
-     */
-    public static final String FAQ_ANSWER = "faqAnswer";
     
     /**
      * 生成的答案
      * 类型：String
-     * 来源：ScenicKnowledgeAnswerGeneratorNode / FaqAnswerPolishNode
+     * 来源：HybridRetrievalNode / GeneralChatFallbackNode
      */
     public static final String ANSWER = "answer";
     

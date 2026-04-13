@@ -65,7 +65,7 @@ spring:
       # 设置总上传的文件大小
       max-request-size: 20MB
   config:
-    import: classpath:chatclient/scenic-knowledge.yml,classpath:chatclient/route-polish.yml,classpath:chatclient/profile-update.yml,classpath:chatclient/map-route-invoker.yml,classpath:chatclient/general-chat.yml,classpath:chatclient/faq-polish.yml,classpath:chatclient/distinguish.yml
+    import: classpath:chatclient/hybrid-retrieval.yml,classpath:chatclient/route-polish.yml,classpath:chatclient/profile-update.yml,classpath:chatclient/map-route-invoker.yml,classpath:chatclient/general-chat.yml,classpath:chatclient/distinguish.yml
   ai:
     dashscope:
       api-key: ${DASHSCOPE_API_KEY:sk-25a0e981c714438e85fe067faaf64295}

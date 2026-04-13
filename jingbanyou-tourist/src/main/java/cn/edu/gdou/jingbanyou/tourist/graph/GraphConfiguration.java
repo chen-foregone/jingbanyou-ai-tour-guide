@@ -21,8 +21,6 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphNodeNames.*;
 @Configuration
 public class GraphConfiguration {
 
-    // ==================== 意图识别常量 ====================
-
     /**
      * 路线规划意图
      */
@@ -38,13 +36,11 @@ public class GraphConfiguration {
      */
     public static final String INTENT_COMPLEX_OTHER = "complex_other";
 
-    // 声明所有节点（注入接口类型，兼容 @Async 代理）
+    // 声明所有节点
     @Autowired
     private NodeAction textDistinguishNode;
     @Autowired
     private NodeAction multimodalDistinguishNode;
-    @Autowired
-    private NodeAction faqAnswerPolishNode;
     @Autowired
     private NodeAction generalChatFallbackNode;
     @Autowired
@@ -56,9 +52,7 @@ public class GraphConfiguration {
     @Autowired
     private NodeAction routePolishNode;
     @Autowired
-    private NodeAction scenicKnowledgeAnswerGeneratorNode;
-    @Autowired
-    private NodeAction scenicKnowledgeRetrievalNode;
+    private NodeAction hybridRetrievalNode;
 
     // 绘制图
     @Bean
@@ -68,16 +62,14 @@ public class GraphConfiguration {
         // 添加所有节点
         stateGraph.addNode(TEXT_DISTINGUISH, AsyncNodeAction.node_async(textDistinguishNode));
         stateGraph.addNode(MULTIMODAL_DISTINGUISH, AsyncNodeAction.node_async(multimodalDistinguishNode));
-        stateGraph.addNode(FAQ_ANSWER_POLISH, AsyncNodeAction.node_async(faqAnswerPolishNode));
         stateGraph.addNode(GENERAL_CHAT_FALLBACK, AsyncNodeAction.node_async(generalChatFallbackNode));
         stateGraph.addNode(MAP_ROUTE_API_INVOKER, AsyncNodeAction.node_async(mapRouteApiInvokerNode));
         stateGraph.addNode(PROFILE_LOADER, AsyncNodeAction.node_async(profileLoaderNode));
         stateGraph.addNode(PROFILE_UPDATER, AsyncNodeAction.node_async(profileUpdaterNode));
         stateGraph.addNode(ROUTE_POLISH, AsyncNodeAction.node_async(routePolishNode));
-        stateGraph.addNode(SCENIC_KNOWLEDGE_ANSWER_GENERATOR, AsyncNodeAction.node_async(scenicKnowledgeAnswerGeneratorNode));
-        stateGraph.addNode(SCENIC_KNOWLEDGE_RETRIEVAL, AsyncNodeAction.node_async(scenicKnowledgeRetrievalNode));
+        stateGraph.addNode(HYBRID_RETRIEVAL, AsyncNodeAction.node_async(hybridRetrievalNode));
 
-        // 添加边：START → ProfileLoader
+        // START → ProfileLoader
         stateGraph.addEdge(StateGraph.START, PROFILE_LOADER);
 
         // ProfileLoader → 条件路由：audioData 存在 → 多模态，否则 → 纯文本
@@ -93,7 +85,7 @@ public class GraphConfiguration {
                 MULTIMODAL_DISTINGUISH, MULTIMODAL_DISTINGUISH
         ));
 
-        // 意图识别后的条件路由（两个分支都走同一个逻辑）
+        // 意图识别后的条件路由
         stateGraph.addConditionalEdges(TEXT_DISTINGUISH, intentRouter(), intentRoutingMap());
         stateGraph.addConditionalEdges(MULTIMODAL_DISTINGUISH, intentRouter(), intentRoutingMap());
 
@@ -101,9 +93,8 @@ public class GraphConfiguration {
         stateGraph.addEdge(MAP_ROUTE_API_INVOKER, ROUTE_POLISH);
         stateGraph.addEdge(ROUTE_POLISH, PROFILE_UPDATER);
 
-        // 景区问答路径：检索 → 生成答案 → 画像更新 → 结束
-        stateGraph.addEdge(SCENIC_KNOWLEDGE_RETRIEVAL, SCENIC_KNOWLEDGE_ANSWER_GENERATOR);
-        stateGraph.addEdge(SCENIC_KNOWLEDGE_ANSWER_GENERATOR, PROFILE_UPDATER);
+        // 景点问答路径：混合检索（FAQ+知识库并行） → 画像更新 → 结束
+        stateGraph.addEdge(HYBRID_RETRIEVAL, PROFILE_UPDATER);
 
         // 闲聊兜底路径：闲聊 → 画像更新 → 结束
         stateGraph.addEdge(GENERAL_CHAT_FALLBACK, PROFILE_UPDATER);
@@ -131,7 +122,7 @@ public class GraphConfiguration {
     private Map<String, String> intentRoutingMap() {
         return Map.of(
                 INTENT_ROUTE_PLAN, MAP_ROUTE_API_INVOKER,
-                INTENT_SPOT_QUESTION, SCENIC_KNOWLEDGE_RETRIEVAL,
+                INTENT_SPOT_QUESTION, HYBRID_RETRIEVAL,
                 INTENT_COMPLEX_OTHER, GENERAL_CHAT_FALLBACK
         );
     }
