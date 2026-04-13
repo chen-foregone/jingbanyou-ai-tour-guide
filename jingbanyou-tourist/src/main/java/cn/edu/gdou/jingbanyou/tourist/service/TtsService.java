@@ -9,6 +9,7 @@ import org.dromara.x.file.storage.core.FileStorageService;
 import org.springframework.ai.audio.tts.TextToSpeechModel;
 import org.springframework.ai.audio.tts.TextToSpeechPrompt;
 import org.springframework.ai.audio.tts.TextToSpeechResponse;
+import reactor.core.publisher.Flux;
 import org.springframework.stereotype.Service;
 
 /**
@@ -41,11 +42,20 @@ public class TtsService {
             // 1. 构建 TTS 选项，优先使用数字人配置中的音色
             DashScopeAudioSpeechOptions options = buildOptions(digitalHuman);
 
-            // 2. 调用 TTS 生成音频
+            // 2. 调用 TTS 生成音频（cosyvoice-v1 需要使用流式调用）
             TextToSpeechPrompt prompt = new TextToSpeechPrompt(text, options);
-            TextToSpeechResponse response = textToSpeechModel.call(prompt);
+            Flux<TextToSpeechResponse> responseFlux = textToSpeechModel.stream(prompt);
 
-            byte[] audioBytes = response.getResult().getOutput();
+            // 3. 收集所有音频数据块并合并
+            byte[] audioBytes = responseFlux
+                    .map(response -> {
+                        if (response != null && response.getResult() != null) {
+                            return response.getResult().getOutput();
+                        }
+                        return new byte[0];
+                    })
+                    .reduce(new byte[0], this::concatenateArrays)
+                    .block();
 
             if (audioBytes == null || audioBytes.length == 0) {
                 log.warn("TTS 返回空音频数据, sessionId={}", sessionId);
@@ -84,6 +94,16 @@ public class TtsService {
         }
 
         return builder.build();
+    }
+
+    /**
+     * 合并两个字节数组
+     */
+    private byte[] concatenateArrays(byte[] first, byte[] second) {
+        byte[] result = new byte[first.length + second.length];
+        System.arraycopy(first, 0, result, 0, first.length);
+        System.arraycopy(second, 0, result, first.length, second.length);
+        return result;
     }
 
     /**

@@ -6,14 +6,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
 
 import java.util.Map;
 
 /**
  * 意图分类器基类
  * <p>模板方法：apply() 固定流程：调用模型 → 解析 JSON → 写状态
- * <p>子类只需实现 getSystemPrompt() 返回 system prompt（ChatClient 已注入 Advisor）
+ * <p>注意：意图分类只接收当前用户问题，不注入对话历史（避免 AI 问候语干扰分类结果）
  */
 @Slf4j
 public abstract class BaseDistinguishNode implements NodeAction {
@@ -38,9 +37,8 @@ public abstract class BaseDistinguishNode implements NodeAction {
      */
     public Map<String, Object> apply(OverAllState state) throws Exception {
         String question = state.value("question", String.class).orElse("");
-        String sessionId = state.value("sessionId", String.class).orElse(null);
 
-        String modelOutput = invoke(question, sessionId);
+        String modelOutput = invoke(question);
 
         // 解析 JSON 结果
         String cleaned = modelOutput.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
@@ -57,12 +55,11 @@ public abstract class BaseDistinguishNode implements NodeAction {
     }
 
     /**
-     * 调用 ChatClient（ChatClient defaultSystem + defaultAdvisors 已配置好，只需传 question 和 sessionId）
+     * 调用 ChatClient（defaultSystem 已注入，只需传 question）
      */
-    protected String invoke(String question, String sessionId) {
+    protected String invoke(String question) {
         return chatClient.prompt()
                 .user(userSpec -> userSpec.params(Map.of("question", question)))
-                .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
                 .call()
                 .content();
     }

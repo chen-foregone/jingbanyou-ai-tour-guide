@@ -23,10 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
 
 /**
- * 前台游客端 TouristController
- * <p>
- * 路径: /api/tourist/*
- * 前端 tourist-web 专用接口，公开无需认证
+ * 前台游客端
  *
  * @author jingbanyou
  */
@@ -45,8 +42,9 @@ public class TouristController extends BaseController {
     private final ChatMemoryService chatMemoryService;
 
     /**
-     * GET /api/tourist/bootstrap
-     * 前台首屏初始化数据
+     * 前台首屏初始化
+     * @param scenicId 景区ID
+     * @return 景区信息、数字人配置、欢迎语
      */
     @GetMapping("/bootstrap")
     public AjaxResult bootstrap(@RequestParam Long scenicId) {
@@ -75,8 +73,9 @@ public class TouristController extends BaseController {
     }
 
     /**
-     * POST /api/tourist/chat
-     * 文本对话，复用 LangGraph 执行逻辑
+     * 文本对话
+     * @param request 包含 message、sessionId、scenicId
+     * @return AI回复、意图、语音
      */
     @PostMapping("/chat")
     public AjaxResult chat(@RequestBody Map<String, Object> request) {
@@ -109,14 +108,12 @@ public class TouristController extends BaseController {
             String answer = (String) result.value(GraphStateKey.ANSWER).orElse("");
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
 
-            // 构造回复结构
             String replyId = "assistant-" + System.currentTimeMillis();
             Map<String, Object> reply = new LinkedHashMap<>();
             reply.put("id", replyId);
             reply.put("role", "assistant");
             reply.put("content", answer);
 
-            // 路线规划意图时，polishedRoutes → attachments
             if (GraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
                 List<?> rawRoutes = result.value(GraphStateKey.POLISHED_ROUTES, List.class).orElse(null);
                 if (rawRoutes != null && !rawRoutes.isEmpty()) {
@@ -128,7 +125,6 @@ public class TouristController extends BaseController {
                 reply.put("attachments", List.of());
             }
 
-            // voice 部分 TTS 合成
             DigitalHumanConfig dh = scenicId != null
                     ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
             String audioUrl = ttsService.synthesize(answer, sessionId, dh);
@@ -146,12 +142,6 @@ public class TouristController extends BaseController {
         }
     }
 
-    /**
-     * 将 Graph 的 polishedRoutes 转换为前端附件格式
-     * <p>
-     * Graph 返回: List<Map> — 每条路线含 description/suitableFor/tips/duration 等
-     * 前端期望: RouteAttachment 格式
-     */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> buildRouteAttachments(List<?> rawRoutes) {
         List<Map<String, Object>> attachments = new ArrayList<>();
@@ -205,12 +195,9 @@ public class TouristController extends BaseController {
     }
 
     /**
-     * POST /api/tourist/tts
-     * 独立 TTS 接口，将文本合成为语音并上传 OSS
-     *
-     * @param text     要合成的文本
-     * @param scenicId 景区 ID（用于获取数字人音色配置）
-     * @param sessionId 会话 ID
+     * 文本转语音
+     * @param request 包含 text、sessionId、scenicId
+     * @return 语音文件地址
      */
     @PostMapping("/tts")
     public AjaxResult tts(@RequestBody Map<String, Object> request) {
@@ -243,11 +230,10 @@ public class TouristController extends BaseController {
     }
 
     /**
-     * POST /api/tourist/voice/transcribe
-     * 语音转文字（ASR），使用 DashScope Paraformer 模型
-     *
-     * @param file     音频文件（支持 mp3/wav/m4a/aac/pcm）
-     * @param language 语言提示，默认为 zh
+     * 语音转文字
+     * @param file 音频文件
+     * @param language 语言提示
+     * @return 识别文本
      */
     @PostMapping("/voice/transcribe")
     public AjaxResult transcribe(@RequestParam("file") MultipartFile file,
@@ -273,8 +259,9 @@ public class TouristController extends BaseController {
     }
 
     /**
-     * POST /api/tourist/chat/end
-     * 前端页面离开时调用，触发对话历史异步持久化到 MySQL
+     * 会话结束，持久化对话历史
+     * @param request 包含 sessionId、scenicId、visitorId
+     * @return 保存结果
      */
     @PostMapping("/chat/end")
     public AjaxResult endChat(@RequestBody Map<String, Object> request) {

@@ -36,8 +36,7 @@ public class ScenicKnowledgeRetrievalNode implements NodeAction {
         SearchRequest request = SearchRequest.builder()
                 .query(question)
                 .topK(3)
-                .similarityThreshold(0.55)
-                .filterExpression("scenicId == '" + scenicId + "'")
+                .similarityThreshold(0.4)
                 .build();
 
         List<Document> documents = ((RedisVectorStore) vectorStore).doSimilaritySearch(request);

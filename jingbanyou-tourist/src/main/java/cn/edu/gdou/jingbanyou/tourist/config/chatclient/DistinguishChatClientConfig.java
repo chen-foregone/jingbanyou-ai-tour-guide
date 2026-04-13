@@ -4,7 +4,6 @@ import com.alibaba.cloud.ai.dashscope.api.DashScopeResponseFormat;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,13 +20,13 @@ public class DistinguishChatClientConfig {
 
     /**
      * 纯文本场景的 system prompt（来自 distinguish.yml）
-     * 历史由 Advisor 自动注入，无需 {history} 占位符
+     * 注意：不注入对话历史，避免 AI 问候语干扰分类结果
      */
     private String prompt;
 
     /**
      * 多模态场景的 system prompt（音频 + 文字，prompt 简短：只描述任务）
-     * 历史由 Advisor 自动注入
+     * 注意：不注入对话历史
      */
     private String multimodalPrompt;
 
@@ -36,14 +35,11 @@ public class DistinguishChatClientConfig {
     // ===== 纯文本 ChatClient =====
 
     @Bean("textDistinguishChatClient")
-    public ChatClient textDistinguishChatClient(
-            ChatClient.Builder builder,
-            MessageChatMemoryAdvisor chatMemoryAdvisor) {
+    public ChatClient textDistinguishChatClient(ChatClient.Builder builder) {
         validateModel();
         DashScopeChatOptions options = buildOptions();
         return builder
                 .defaultSystem(prompt)
-                .defaultAdvisors(chatMemoryAdvisor)
                 .defaultOptions(options)
                 .build();
     }
@@ -51,14 +47,11 @@ public class DistinguishChatClientConfig {
     // ===== 多模态 ChatClient =====
 
     @Bean("multimodalDistinguishChatClient")
-    public ChatClient multimodalDistinguishChatClient(
-            ChatClient.Builder builder,
-            MessageChatMemoryAdvisor chatMemoryAdvisor) {
+    public ChatClient multimodalDistinguishChatClient(ChatClient.Builder builder) {
         validateModel();
         DashScopeChatOptions options = buildOptions();
         return builder
                 .defaultSystem(multimodalPrompt)
-                .defaultAdvisors(chatMemoryAdvisor)
                 .defaultOptions(options)
                 .build();
     }
