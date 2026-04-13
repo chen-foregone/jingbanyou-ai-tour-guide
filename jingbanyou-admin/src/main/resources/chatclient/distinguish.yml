@@ -1,7 +1,8 @@
 jingbanyou:
   ai:
     distinguish:
-      # 纯文本场景的 system prompt（历史由 Advisor 自动注入，无需 {history} 占位符）
+      # 纯文本场景的 system prompt
+      # 注意：{question} 占位符已移至 user 文本，由 params() 动态注入
       prompt: |
         你是一个景区智能导游助手的意图分类器。
 
@@ -19,9 +20,6 @@ jingbanyou:
         "从入口到大佛怎么走" → route_plan
         "帮我规划一条路线" → route_plan
         "你好" → complex_other
-
-        当前游客问题：
-        {question}
 
         请只输出以下JSON格式（不要输出任何解释）：
         { "intent": "意图标签", "question": "从问题中提取的核心内容" }

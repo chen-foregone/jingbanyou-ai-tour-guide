@@ -43,7 +43,9 @@ public class MapRouteApiInvokerNode implements NodeAction {
         String question = state.value(QUESTION, String.class).orElse("");
 
         String llmResponse = chatClient.prompt()
-                .user(userSpec -> userSpec.params(Map.of("question", question)))
+                .user(u -> u
+                        .text("用户问题：{question}")
+                        .param("question", question))
                 .call()
                 .content();
 

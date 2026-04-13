@@ -42,7 +42,7 @@ jingbanyou:
         - 引导语不要包含任何 JSON 结构，纯文本即可
         - 如果不确定起点/终点，可根据景区常见地点进行合理推测
 
-        用户问题：{question}
+        请根据以下用户问题判断并返回结果：
       model:
         name: qwen-turbo
         temperature: 0.1

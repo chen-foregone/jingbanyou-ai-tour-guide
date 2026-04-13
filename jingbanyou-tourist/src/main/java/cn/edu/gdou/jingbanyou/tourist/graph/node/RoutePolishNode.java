@@ -50,10 +50,10 @@ public class RoutePolishNode implements NodeAction {
         String rawRoutesJson = objectMapper.writeValueAsString(rawRoutes);
 
         String polishedJson = chatClient.prompt()
-                .user(userSpec -> userSpec.params(Map.of(
-                        "userProfile", userProfileDesc,
-                        "rawRoutes", rawRoutesJson
-                )))
+                .user(u -> u
+                        .text("用户画像：\n{userProfile}\n\n原始路线数据：\n{rawRoutes}")
+                        .param("userProfile", userProfileDesc)
+                        .param("rawRoutes", rawRoutesJson))
                 .call()
                 .content();
 

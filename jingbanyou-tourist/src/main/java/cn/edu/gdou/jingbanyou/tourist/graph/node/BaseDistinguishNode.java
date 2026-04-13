@@ -59,7 +59,9 @@ public abstract class BaseDistinguishNode implements NodeAction {
      */
     protected String invoke(String question) {
         return chatClient.prompt()
-                .user(userSpec -> userSpec.params(Map.of("question", question)))
+                .user(u -> u
+                        .text("当前游客问题：{question}")
+                        .param("question", question))
                 .call()
                 .content();
     }
