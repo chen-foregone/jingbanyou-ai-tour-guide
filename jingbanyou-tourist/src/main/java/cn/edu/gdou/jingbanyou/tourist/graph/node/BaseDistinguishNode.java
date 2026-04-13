@@ -40,7 +40,12 @@ public abstract class BaseDistinguishNode implements NodeAction {
         log.info("[意图分类] 输入: question={}", question);
 
         String userText = "当前游客问题：\n" + question;
-        log.info("[意图分类] userText={}", userText);
+        // 打印字节十六进制，确认编码
+        StringBuilder hex = new StringBuilder();
+        for (byte b : userText.getBytes(java.nio.charset.StandardCharsets.UTF_8)) {
+            hex.append(String.format("%02X ", b));
+        }
+        log.info("[意图分类] userText UTF-8 bytes: {}", hex);
 
         String modelOutput = chatClient.prompt()
                 .user(userText)

@@ -80,6 +80,12 @@ public class TouristController extends BaseController {
     @PostMapping("/chat")
     public AjaxResult chat(@RequestBody Map<String, Object> request) {
         String message = (String) request.get("message");
+        // 打印字节十六进制
+        StringBuilder hex = new StringBuilder();
+        for (byte b : message.getBytes(java.nio.charset.StandardCharsets.UTF_8)) {
+            hex.append(String.format("%02X ", b));
+        }
+        log.info("[Chat入口] message={}, UTF-8 bytes: {}", message, hex);
         String sessionId = (String) request.get("sessionId");
         Long scenicId = request.get("scenicId") != null
                 ? ((Number) request.get("scenicId")).longValue() : null;
