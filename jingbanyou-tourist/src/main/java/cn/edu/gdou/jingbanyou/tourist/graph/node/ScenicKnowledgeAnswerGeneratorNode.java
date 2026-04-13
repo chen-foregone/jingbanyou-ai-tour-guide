@@ -4,6 +4,7 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -17,6 +18,7 @@ import java.util.Map;
  *
  * <p>对话历史由 ChatMemoryAdvisor 管理（Redis 热缓存）
  */
+@Slf4j
 @Component
 public class ScenicKnowledgeAnswerGeneratorNode implements NodeAction {
 

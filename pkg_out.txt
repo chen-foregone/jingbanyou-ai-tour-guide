@@ -1,0 +1,71 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] jingbanyou                                                         [pom]
+[INFO] jingbanyou-common                                                  [jar]
+[INFO] jingbanyou-system                                                  [jar]
+[INFO] jingbanyou-framework                                               [jar]
+[INFO] jingbanyou-quartz                                                  [jar]
+[INFO] jingbanyou-generator                                               [jar]
+[INFO] jingbanyou-manage                                                  [jar]
+[INFO] jingbanyou-tourist                                                 [jar]
+[INFO] jingbanyou-admin                                                   [jar]
+[INFO] 
+[INFO] -----------------------< cn.edu.gdou:jingbanyou >-----------------------
+[INFO] Building jingbanyou 3.9.2                                          [1/9]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] -------------------< cn.edu.gdou:jingbanyou-common >--------------------
+[INFO] Building jingbanyou-common 3.9.2                                   [2/9]
+[INFO]   from jingbanyou-common\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ jingbanyou-common ---
+[INFO] skip non existing resourceDirectory C:\Users\c1342\IdeaProjects\20260402154946\jingbanyou-ai-tour-guide\jingbanyou-common\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jingbanyou-common ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ jingbanyou-common ---
+[INFO] Not copying test resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ jingbanyou-common ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Not compiling test sources
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ jingbanyou-common ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ jingbanyou-common ---
+[INFO] 
+[INFO] -------------------< cn.edu.gdou:jingbanyou-system >--------------------
+[INFO] Building jingbanyou-system 3.9.2                                   [3/9]
+[INFO]   from jingbanyou-system\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.4.0:resources (default-resources) @ jingbanyou-system ---
+[INFO] Copying 16 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ jingbanyou-system ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ jingbanyou-system ---
+[INFO] Not copying test resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ jingbanyou-system ---
+[WARNING]  Parameter 'compilerVersion' (user property 'maven.compiler.compilerVersion') is deprecated: This parameter is no longer evaluated by the underlying compilers, instead the actual version of the javac binary is automatically retrieved.
+[INFO] Not compiling test sources
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ jingbanyou-system ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.5.0:jar (default-jar) @ jingbanyou-system ---
+[INFO] 
+[INFO] ------------------< cn.edu.gdou:jingbanyou-framework >------------------
+[INFO] Building jingbanyou-framework 3.9.2                                [4/9]
+[INFO]   from jingbanyou-framework\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------

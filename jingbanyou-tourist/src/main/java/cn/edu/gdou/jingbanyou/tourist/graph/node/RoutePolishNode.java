@@ -7,6 +7,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ import java.util.Map;
  * 输入：state.RAW_ROUTES（多条原始路线）, state.VISITOR_PROFILE（用户画像）
  * 输出：state.POLISHED_ROUTES（润色后的路线列表）
  */
+@Slf4j
 @Component
 public class RoutePolishNode implements NodeAction {
 

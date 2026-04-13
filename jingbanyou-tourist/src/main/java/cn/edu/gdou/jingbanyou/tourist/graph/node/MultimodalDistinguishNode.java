@@ -43,9 +43,11 @@ public class MultimodalDistinguishNode extends BaseDistinguishNode {
         String sessionId = state.value(SESSION_ID, String.class).orElse(null);
         byte[] audioData = state.value(AUDIO_DATA, byte[].class).orElse(null);
 
+        log.info("[多模态意图分类] 输入: question={}, audioData.length={}", question, audioData != null ? audioData.length : 0);
         // defaultSystem 已由 DistinguishChatClientConfig 注入为 multimodalPrompt
         // 此处只需发送音频 + 简短引导文本
         String modelOutput = invokeWithAudio(audioData, question, sessionId);
+        log.info("[多模态意图分类] 模型原始输出: {}", modelOutput);
 
         // 解析 JSON 结果
         String cleaned = modelOutput.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
@@ -53,7 +55,7 @@ public class MultimodalDistinguishNode extends BaseDistinguishNode {
         String intent = json.get("intent").asText();
         String extractedQuestion = json.has("question") ? json.get("question").asText() : question;
 
-        log.info("多模态意图识别结果: intent={}, question={}", intent, extractedQuestion);
+        log.info("[多模态意图分类] 解析结果: intent={}, extractedQuestion={}", intent, extractedQuestion);
 
         return state.updateState(Map.of(
                 INTENT, intent,

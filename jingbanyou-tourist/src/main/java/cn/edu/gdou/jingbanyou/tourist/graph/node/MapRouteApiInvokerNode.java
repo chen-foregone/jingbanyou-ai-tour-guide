@@ -6,6 +6,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,7 @@ import java.util.Map;
  * - 参齐全：直接输出路线 JSON 数组 [...]
  * - 缺参：以纯文本回复（不含 JSON 结构），用于引导用户补充信息
  */
+@Slf4j
 @Component
 public class MapRouteApiInvokerNode implements NodeAction {
 

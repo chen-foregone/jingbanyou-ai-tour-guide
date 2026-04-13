@@ -18,6 +18,7 @@ import java.util.Map;
  * 任务：把 FAQ 库的固定标准答案，润色得更亲切、更符合 AI 数字人语气
  * 注意：暂时禁用，等待配置完善后启用
  */
+@Slf4j
 @Component  // TODO: 添加 jingbanyou.ai.faq-polish 配置后启用
 public class FaqAnswerPolishNode implements NodeAction {
 
@@ -34,13 +35,14 @@ public class FaqAnswerPolishNode implements NodeAction {
         String faqAnswer = state.value(FAQ_ANSWER, String.class).orElse("");
         String question = state.value(QUESTION, String.class).orElse("");
 
+        log.info("[FAQ润色] 输入: question={}, faqAnswer={}", question, faqAnswer);
+        String userText = "游客问题：" + question + "\nFAQ标准答案：" + faqAnswer;
+        log.info("[FAQ润色] userText={}", userText);
         String answer = chatClient.prompt()
-                .user(u -> u
-                        .text("游客问题：{question}\nFAQ标准答案：{faq_answer}")
-                        .param("question", question)
-                        .param("faq_answer", faqAnswer))
+                .user(userText)
                 .call()
                 .content();
+        log.info("[FAQ润色] 输出: {}", answer);
 
         return state.updateState(Map.of(ANSWER, answer));
     }

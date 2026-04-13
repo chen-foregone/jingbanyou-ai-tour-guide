@@ -3,6 +3,7 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
+import lombok.extern.slf4j.Slf4j;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -17,6 +18,7 @@ import java.util.Map;
  *
  * <p>对话历史由 ChatMemoryAdvisor 管理（Redis 热缓存）
  */
+@Slf4j
 @Component
 public class GeneralChatFallbackNode implements NodeAction {
 

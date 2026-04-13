@@ -81,13 +81,14 @@ public class ProfileUpdaterNode implements NodeAction {
 
     private List<String> extractTags(String question, String answer) {
         try {
+            log.info("[画像更新] 输入: question={}, answer={}", question, answer);
+            String userText = "游客问题：" + question + "\nAI回答：" + answer;
+            log.info("[画像更新] userText={}", userText);
             String raw = chatClient.prompt()
-                    .user(u -> u
-                            .text("游客问题：{question}\nAI回答：{answer}")
-                            .param("question", question)
-                            .param("answer", answer))
+                    .user(userText)
                     .call()
                     .content();
+            log.info("[画像更新] 模型输出: {}", raw);
 
             if (raw != null && raw.contains("[")) {
                 String jsonPart = raw.substring(raw.indexOf('['), raw.lastIndexOf(']') + 1);
