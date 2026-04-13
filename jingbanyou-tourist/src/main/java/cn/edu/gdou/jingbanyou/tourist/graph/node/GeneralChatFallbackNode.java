@@ -32,15 +32,16 @@ public class GeneralChatFallbackNode implements NodeAction {
         String question = state.value(QUESTION, String.class).orElse("");
         String sessionId = state.value(SESSION_ID, String.class).orElse(null);
 
+        log.info("[闲聊兜底] 输入: question={}, sessionId={}", question, sessionId);
+        String userText = "游客消息：" + question;
+        log.info("[闲聊兜底] userText={}", userText);
         // Advisor 自动注入历史到 system prompt
         String answer = chatClient.prompt()
-                .user(userSpec -> userSpec.params(Map.of(
-                        QUESTION, question
-                        // HISTORY 已由 Advisor 注入到 system prompt
-                )))
+                .user(userText)
                 .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
                 .call()
                 .content();
+        log.info("[闲聊兜底] 输出: {}", answer);
 
         if (answer == null) {
             answer = "抱歉，此问题我无法回答。";

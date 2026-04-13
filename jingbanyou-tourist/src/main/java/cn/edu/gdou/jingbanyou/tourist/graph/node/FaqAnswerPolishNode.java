@@ -5,6 +5,7 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 import cn.edu.gdou.jingbanyou.common.config.FaqVectorStoreConfig;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,7 +35,10 @@ public class FaqAnswerPolishNode implements NodeAction {
         String question = state.value(QUESTION, String.class).orElse("");
 
         String answer = chatClient.prompt()
-                .user(userSpec -> userSpec.params(Map.of(FAQ_ANSWER, faqAnswer, QUESTION, question)))
+                .user(u -> u
+                        .text("游客问题：{question}\nFAQ标准答案：{faq_answer}")
+                        .param("question", question)
+                        .param("faq_answer", faqAnswer))
                 .call()
                 .content();
 

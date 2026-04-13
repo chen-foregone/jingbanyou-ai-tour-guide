@@ -37,8 +37,16 @@ public abstract class BaseDistinguishNode implements NodeAction {
      */
     public Map<String, Object> apply(OverAllState state) throws Exception {
         String question = state.value("question", String.class).orElse("");
+        log.info("[意图分类] 输入: question={}", question);
 
-        String modelOutput = invoke(question);
+        String userText = "当前游客问题：\n" + question;
+        log.info("[意图分类] userText={}", userText);
+
+        String modelOutput = chatClient.prompt()
+                .user(userText)
+                .call()
+                .content();
+        log.info("[意图分类] 模型原始输出: {}", modelOutput);
 
         // 解析 JSON 结果
         String cleaned = modelOutput.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
@@ -46,23 +54,11 @@ public abstract class BaseDistinguishNode implements NodeAction {
         String intent = json.get("intent").asText();
         String extractedQuestion = json.has("question") ? json.get("question").asText() : question;
 
-        log.info("意图识别结果: intent={}, question={}", intent, extractedQuestion);
+        log.info("[意图分类] 解析结果: intent={}, extractedQuestion={}", intent, extractedQuestion);
 
         return state.updateState(Map.of(
                 "intent", intent,
                 "question", extractedQuestion
         ));
-    }
-
-    /**
-     * 调用 ChatClient（defaultSystem 已注入，只需传 question）
-     */
-    protected String invoke(String question) {
-        return chatClient.prompt()
-                .user(u -> u
-                        .text("当前游客问题：{question}")
-                        .param("question", question))
-                .call()
-                .content();
     }
 }

@@ -33,21 +33,21 @@ public class ScenicKnowledgeAnswerGeneratorNode implements NodeAction {
         String retrievedDocs = state.value(RETRIEVED_DOCS, String.class).orElse("");
         String sessionId = state.value(SESSION_ID, String.class).orElse(null);
 
+        log.info("[景区知识生成] 输入: question={}, retrievedDocs={}, sessionId={}", question, retrievedDocs, sessionId);
+        String userText = "参考资料：\n" + retrievedDocs + "\n\n游客问题：" + question;
+        log.info("[景区知识生成] userText={}", userText);
         // Advisor 自动注入历史到 system prompt
         String content;
         if (retrievedDocs.isBlank()) {
             content = "这个问题我暂时还不太清楚，建议您咨询景区工作人员。";
         } else {
             content = chatClient.prompt()
-                    .user(userSpec -> userSpec.params(Map.of(
-                            QUESTION, question,
-                            RETRIEVED_DOCS, retrievedDocs
-                            // HISTORY 已由 Advisor 注入到 system prompt
-                    )))
+                    .user(userText)
                     .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
                     .call()
                     .content();
         }
+        log.info("[景区知识生成] 输出: {}", content);
 
         // Advisor After 自动写入 assistant 消息，无需手动处理
         return state.updateState(Map.of(ANSWER, content));

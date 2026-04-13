@@ -49,13 +49,14 @@ public class RoutePolishNode implements NodeAction {
         String userProfileDesc = buildProfileDescription(profile);
         String rawRoutesJson = objectMapper.writeValueAsString(rawRoutes);
 
+        log.info("[路线润色] 输入: userProfile={}, rawRoutes={}", userProfileDesc, rawRoutesJson);
+        String userText = "用户画像：\n" + userProfileDesc + "\n\n原始路线数据：\n" + rawRoutesJson;
+        log.info("[路线润色] userText={}", userText);
         String polishedJson = chatClient.prompt()
-                .user(u -> u
-                        .text("用户画像：\n{userProfile}\n\n原始路线数据：\n{rawRoutes}")
-                        .param("userProfile", userProfileDesc)
-                        .param("rawRoutes", rawRoutesJson))
+                .user(userText)
                 .call()
                 .content();
+        log.info("[路线润色] 输出: {}", polishedJson);
 
         List<Map<String, Object>> polishedRoutes = parsePolishedRoutes(polishedJson);
         return state.updateState(Map.of(POLISHED_ROUTES, polishedRoutes));

@@ -82,7 +82,10 @@ public class ProfileUpdaterNode implements NodeAction {
     private List<String> extractTags(String question, String answer) {
         try {
             String raw = chatClient.prompt()
-                    .user(userSpec -> userSpec.params(Map.of("question", question, "answer", answer)))
+                    .user(u -> u
+                            .text("游客问题：{question}\nAI回答：{answer}")
+                            .param("question", question)
+                            .param("answer", answer))
                     .call()
                     .content();
 

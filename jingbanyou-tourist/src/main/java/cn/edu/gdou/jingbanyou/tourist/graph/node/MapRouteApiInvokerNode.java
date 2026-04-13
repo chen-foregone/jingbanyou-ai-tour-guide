@@ -42,12 +42,14 @@ public class MapRouteApiInvokerNode implements NodeAction {
     public Map<String, Object> apply(OverAllState state) throws Exception {
         String question = state.value(QUESTION, String.class).orElse("");
 
+        log.info("[路线规划调用] 输入: question={}", question);
+        String userText = "用户问题：" + question;
+        log.info("[路线规划调用] userText={}", userText);
         String llmResponse = chatClient.prompt()
-                .user(u -> u
-                        .text("用户问题：{question}")
-                        .param("question", question))
+                .user(userText)
                 .call()
                 .content();
+        log.info("[路线规划调用] 模型输出: {}", llmResponse);
 
         if (llmResponse != null && llmResponse.trim().startsWith("[")) {
             List<Map<String, Object>> rawRoutes = parseRoutes(llmResponse);
