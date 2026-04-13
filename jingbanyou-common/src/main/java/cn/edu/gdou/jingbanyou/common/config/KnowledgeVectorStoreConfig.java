@@ -1,6 +1,5 @@
 package cn.edu.gdou.jingbanyou.common.config;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -10,10 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import redis.clients.jedis.JedisPooled;
+import redis.clients.jedis.json.Path;
 import redis.clients.jedis.search.FTCreateParams;
 import redis.clients.jedis.search.IndexDataType;
 import redis.clients.jedis.search.schemafields.NumericField;
-import redis.clients.jedis.json.Path;
 import redis.clients.jedis.search.schemafields.SchemaField;
 import redis.clients.jedis.search.schemafields.TextField;
 import redis.clients.jedis.search.schemafields.VectorField;
@@ -30,7 +29,6 @@ import java.util.Set;
  */
 @Slf4j
 @Configuration
-@RequiredArgsConstructor
 public class KnowledgeVectorStoreConfig {
 
     @Value("${redis.vectorstore.host:localhost}")
@@ -39,10 +37,8 @@ public class KnowledgeVectorStoreConfig {
     @Value("${redis.vectorstore.port:6379}")
     private int redisPort;
 
-    private final EmbeddingModel embeddingModel;
-
     @Bean
-    public VectorStore knowledgeVectorStore() {
+    public VectorStore knowledgeVectorStore(EmbeddingModel embeddingModel) {
         JedisPooled jedis = new JedisPooled(redisHost, redisPort);
         createIndexIfNotExists(jedis);
 
@@ -144,7 +140,7 @@ public class KnowledgeVectorStoreConfig {
             List<Document> docs = new ArrayList<>();
             for (String key : keys) {
                 try {
-                    String json = jedis.jsonGetAsPlainString(key, redis.clients.jedis.json.Path.ROOT_PATH);
+                    String json = jedis.jsonGet(key, String.class);
                     if (json != null && !json.isEmpty()) {
                         Map<String, Object> data = parseJsonToMap(json);
                         if (data != null) {
