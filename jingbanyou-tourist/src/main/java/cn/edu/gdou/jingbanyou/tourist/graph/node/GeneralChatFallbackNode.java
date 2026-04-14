@@ -50,6 +50,6 @@ public class GeneralChatFallbackNode implements NodeAction {
         }
 
         // Advisor After 自动写入 assistant 消息，无需手动处理
-        return state.updateState(Map.of(CHAT_RESPONSE, answer));
+        return state.updateState(Map.of(ANSWER, answer));
     }
 }
