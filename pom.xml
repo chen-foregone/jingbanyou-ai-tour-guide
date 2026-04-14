@@ -259,7 +259,8 @@
                 <version>${spring-ai-alibaba.version}</version>
             </dependency>
 
-            <!-- dromara 文件存储（支持阿里云 OSS） -->
+            <!-- dromara 文件存储（已迁移到 spring-file-storage，见子模块 pom） -->
+            <!--
             <dependency>
                 <groupId>org.dromara.x-file-storage</groupId>
                 <artifactId>x-file-storage-core</artifactId>
@@ -270,6 +271,7 @@
                 <artifactId>x-file-storage-spring</artifactId>
                 <version>${x-file-storage.version}</version>
             </dependency>
+            -->
 
         </dependencies>
     </dependencyManagement>

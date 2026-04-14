@@ -1,11 +1,11 @@
 package cn.edu.gdou.jingbanyou.tourist.service;
 
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
+import cn.xuyanwu.spring.file.storage.FileInfo;
+import cn.xuyanwu.spring.file.storage.FileStorageService;
 import com.alibaba.cloud.ai.dashscope.audio.tts.DashScopeAudioSpeechOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.dromara.x.file.storage.core.FileInfo;
-import org.dromara.x.file.storage.core.FileStorageService;
 import org.springframework.ai.audio.tts.TextToSpeechModel;
 import org.springframework.ai.audio.tts.TextToSpeechPrompt;
 import org.springframework.ai.audio.tts.TextToSpeechResponse;
@@ -39,14 +39,14 @@ public class TtsService {
         }
 
         try {
-            // 1. 构建 TTS 选项，优先使用数字人配置中的音色
             DashScopeAudioSpeechOptions options = buildOptions(digitalHuman);
+            log.info("[TTS] 开始合成, sessionId={}, text长度={}, digitalHuman={}", 
+                    sessionId, text.length(), 
+                    digitalHuman != null ? "ID=" + digitalHuman.getId() : "null");
 
-            // 2. 调用 TTS 生成音频（cosyvoice-v1 需要使用流式调用）
             TextToSpeechPrompt prompt = new TextToSpeechPrompt(text, options);
             Flux<TextToSpeechResponse> responseFlux = textToSpeechModel.stream(prompt);
 
-            // 3. 收集所有音频数据块并合并
             byte[] audioBytes = responseFlux
                     .map(response -> {
                         if (response != null && response.getResult() != null) {
@@ -58,21 +58,31 @@ public class TtsService {
                     .block();
 
             if (audioBytes == null || audioBytes.length == 0) {
-                log.warn("TTS 返回空音频数据, sessionId={}", sessionId);
+                log.warn("[TTS] 返回空音频数据, sessionId={}", sessionId);
                 return "";
             }
 
-            // 3. 上传至 OSS
             String fileName = String.format("tts/%s/%d.mp3", sessionId, System.currentTimeMillis());
             String ossUrl = uploadToOss(audioBytes, fileName, "audio/mpeg");
 
-            log.info("TTS 合成成功, sessionId={}, 文本长度={}, 音频大小={}KB, OSS URL={}",
+            log.info("[TTS] 合成成功, sessionId={}, 文本长度={}, 音频大小={}KB, OSS URL={}",
                     sessionId, text.length(), audioBytes.length / 1024, ossUrl);
 
             return ossUrl;
 
         } catch (Exception e) {
-            log.error("TTS 合成失败, sessionId={}", sessionId, e);
+            log.error("[TTS] 合成失败, sessionId={}, text={}", sessionId, text, e);
+            
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.contains("418")) {
+                log.error("[TTS] 错误码418 - model与voice版本不匹配！");
+                log.error("[TTS] cosyvoice-v1 需要使用 v1 版本的音色，例如: longxiaocheng, longshuo, longying 等");
+                log.error("[TTS] cosyvoice-v2 需要使用 v2 版本的音色，例如: longxia_v2, longcheng_v2 等（带_v2后缀）");
+                log.error("[TTS] 当前配置: model=cosyvoice-v1, voice={}", 
+                        digitalHuman != null && digitalHuman.getTtsVoiceCode() != null 
+                            ? digitalHuman.getTtsVoiceCode() : "longxiaocheng");
+            }
+            
             return "";
         }
     }
@@ -81,19 +91,24 @@ public class TtsService {
      * 根据数字人配置构建 DashScope TTS 选项
      */
     private DashScopeAudioSpeechOptions buildOptions(DigitalHumanConfig digitalHuman) {
-        DashScopeAudioSpeechOptions.Builder builder = DashScopeAudioSpeechOptions.builder()
-                .model("cosyvoice-v1")
-                .format("mp3")
-                .speed(1.0)
-                .sampleRate(22050);
-
-        // 如果有数字人音色代码，使用它覆盖默认值
+        String voice = "longxiaocheng";
+        
         if (digitalHuman != null && digitalHuman.getTtsVoiceCode() != null
                 && !digitalHuman.getTtsVoiceCode().isBlank()) {
-            builder.voice(digitalHuman.getTtsVoiceCode());
+            voice = digitalHuman.getTtsVoiceCode();
+            log.info("[TTS] 使用数字人配置的音色: {}", voice);
+        } else {
+            log.warn("[TTS] 数字人配置或音色代码为空，使用默认音色: longxiaocheng (cosyvoice-v1)");
         }
 
-        return builder.build();
+        DashScopeAudioSpeechOptions options = DashScopeAudioSpeechOptions.builder()
+                .model("cosyvoice-v1")
+                .voice(voice)
+                .build();
+        
+        log.info("[TTS] 最终配置: model=cosyvoice-v1, voice={}", voice);
+        
+        return options;
     }
 
     /**
@@ -115,11 +130,18 @@ public class TtsService {
      * @return OSS 访问 URL
      */
     private String uploadToOss(byte[] data, String fileName, String mimeType) {
-        // x-file-storage 2.1.0: FileStorageService.of() returns UploadPretreatment
-        FileInfo fileInfo = fileStorageService.of(data)
-                .setPath(fileName)
-                .setContentType(mimeType)
-                .upload();
-        return fileInfo != null ? fileInfo.getUrl() : "";
+        log.info("[OSS] 开始上传, fileName={}, dataSize={}KB", fileName, data.length / 1024);
+        try {
+            FileInfo fileInfo = fileStorageService.of(data)
+                    .setPath(fileName)
+                    .setContentType(mimeType)
+                    .upload();
+            String url = fileInfo != null ? fileInfo.getUrl() : "";
+            log.info("[OSS] 上传成功, URL={}", url);
+            return url;
+        } catch (Exception e) {
+            log.error("[OSS] 上传失败, fileName={}, error={}", fileName, e.getMessage(), e);
+            throw e;
+        }
     }
 }

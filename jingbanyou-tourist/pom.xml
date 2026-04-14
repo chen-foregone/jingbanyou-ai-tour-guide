@@ -108,20 +108,17 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- dromara 文件存储（阿里云 OSS） -->
+        <!-- spring-file-storage（阿里云 OSS） -->
         <dependency>
-            <groupId>org.dromara.x-file-storage</groupId>
-            <artifactId>x-file-storage-core</artifactId>
+            <groupId>cn.xuyanwu</groupId>
+            <artifactId>spring-file-storage</artifactId>
+            <version>0.5.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.dromara.x-file-storage</groupId>
-            <artifactId>x-file-storage-spring</artifactId>
-        </dependency>
-        <!-- 阿里云 OSS SDK（x-file-storage 依赖） -->
+        <!-- 阿里云 OSS SDK（spring-file-storage 依赖） -->
         <dependency>
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
-            <version>3.16.1</version>
+            <version>3.15.1</version>
         </dependency>
 
         <!-- 测试 -->
