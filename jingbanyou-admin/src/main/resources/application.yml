@@ -93,8 +93,8 @@ spring:
             enabled: true # 开启 MCP 客户端的工具回调（Tool Callback）功能
       audio:
         speech:
-          # 使用通义语音合成模型 cosyvoice-v1
-          model: cosyvoice-v1
+          # 使用通义语音合成模型 cosyvoice-v3-flash（最快模型）
+          model: cosyvoice-v3-flash
           # 默认音色（可被 DigitalHumanConfig.ttsVoiceCode 覆盖）
           options:
             voice: longxia
@@ -140,6 +140,7 @@ spring:
     thumbnail-suffix: .min.jpg
     aliyun-oss:
       - platform: aliyun-oss-1
+        enable-storage: true
         endpoint: oss-cn-beijing.aliyuncs.com
         access-key: LTAI5t5nJGzDbFXWaqVktKAK
         secret-key: jM0BTeIOXmHMJd6n2v7WGATfnTC63C

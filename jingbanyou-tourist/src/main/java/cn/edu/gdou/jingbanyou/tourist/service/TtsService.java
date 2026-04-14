@@ -76,10 +76,9 @@ public class TtsService {
             String errorMsg = e.getMessage();
             if (errorMsg != null && errorMsg.contains("418")) {
                 log.error("[TTS] 错误码418 - model与voice版本不匹配！");
-                log.error("[TTS] cosyvoice-v1 需要使用 v1 版本的音色，例如: longxiaocheng, longshuo, longying 等");
-                log.error("[TTS] cosyvoice-v2 需要使用 v2 版本的音色，例如: longxia_v2, longcheng_v2 等（带_v2后缀）");
-                log.error("[TTS] 当前配置: model=cosyvoice-v1, voice={}", 
-                        digitalHuman != null && digitalHuman.getTtsVoiceCode() != null 
+                log.error("[TTS] cosyvoice-v3-flash 需要使用对应的音色代码");
+                log.error("[TTS] 当前配置: model=cosyvoice-v3-flash, voice={}",
+                        digitalHuman != null && digitalHuman.getTtsVoiceCode() != null
                             ? digitalHuman.getTtsVoiceCode() : "longxiaocheng");
             }
             
@@ -98,15 +97,15 @@ public class TtsService {
             voice = digitalHuman.getTtsVoiceCode();
             log.info("[TTS] 使用数字人配置的音色: {}", voice);
         } else {
-            log.warn("[TTS] 数字人配置或音色代码为空，使用默认音色: longxiaocheng (cosyvoice-v1)");
+            log.warn("[TTS] 数字人配置或音色代码为空，使用默认音色: longxiaocheng (cosyvoice-v3-flash)");
         }
 
         DashScopeAudioSpeechOptions options = DashScopeAudioSpeechOptions.builder()
-                .model("cosyvoice-v1")
+                .model("cosyvoice-v3-flash")
                 .voice(voice)
                 .build();
-        
-        log.info("[TTS] 最终配置: model=cosyvoice-v1, voice={}", voice);
+
+        log.info("[TTS] 最终配置: model=cosyvoice-v3-flash, voice={}", voice);
         
         return options;
     }
@@ -127,10 +126,11 @@ public class TtsService {
      * @param data     文件字节数据
      * @param fileName OSS 上的文件路径名（不含 bucket 名）
      * @param mimeType MIME 类型
-     * @return OSS 访问 URL
+     * @return OSS 上的音频文件访问 URL
      */
     private String uploadToOss(byte[] data, String fileName, String mimeType) {
         log.info("[OSS] 开始上传, fileName={}, dataSize={}KB", fileName, data.length / 1024);
+        log.info("[OSS] 可用平台列表: {}", getAvailablePlatforms());
         try {
             FileInfo fileInfo = fileStorageService.of(data)
                     .setPath(fileName)
@@ -141,7 +141,25 @@ public class TtsService {
             return url;
         } catch (Exception e) {
             log.error("[OSS] 上传失败, fileName={}, error={}", fileName, e.getMessage(), e);
+            log.error("[OSS] 异常类型: {}", e.getClass().getName());
+            if (e.getCause() != null) {
+                log.error("[OSS] 根本原因: {}", e.getCause().getMessage());
+            }
             throw e;
+        }
+    }
+
+    /**
+     * 获取当前可用的存储平台列表
+     */
+    private String getAvailablePlatforms() {
+        try {
+            return fileStorageService.getFileStorageServiceList().stream()
+                    .map(s -> s.getPlatform())
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("无");
+        } catch (Exception e) {
+            return "获取失败: " + e.getMessage();
         }
     }
 }
