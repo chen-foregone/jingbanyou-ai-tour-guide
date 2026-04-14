@@ -31,8 +31,8 @@ public class HybridRetrievalNode implements NodeAction {
     private final ChatClient chatClient;
 
     public HybridRetrievalNode(
-            @Qualifier("knowledgeVectorStore") VectorStore knowledgeVectorStore,
-            @Qualifier("faqVectorStore") VectorStore faqVectorStore,
+            VectorStore knowledgeVectorStore,
+            VectorStore faqVectorStore,
             @Qualifier("hybridRetrievalChatClient") ChatClient chatClient) {
         this.knowledgeVectorStore = knowledgeVectorStore;
         this.faqVectorStore = faqVectorStore;
@@ -51,7 +51,7 @@ public class HybridRetrievalNode implements NodeAction {
         SearchRequest faqRequest = SearchRequest.builder()
                 .query(question)
                 .topK(2)
-                .similarityThreshold(0.5)
+                .similarityThreshold(0.0)
                 .build();
         List<Document> faqDocs = faqVectorStore.similaritySearch(faqRequest);
 
@@ -61,18 +61,34 @@ public class HybridRetrievalNode implements NodeAction {
         }
         log.info("[混合检索] FAQ检索到 {} 条", faqDocs.size());
 
-        // 2. 查询景区知识向量库（调试：先不加过滤，看能否检索到数据）
-        SearchRequest.Builder kbBuilder = SearchRequest.builder()
+        // 2. 查询景区知识向量库（Java 层过滤 scenicId）
+        SearchRequest kbRequest = SearchRequest.builder()
                 .query(question)
-                .topK(3)
-                .similarityThreshold(0.3);
+                .topK(10)
+                .similarityThreshold(0.0)
+                .build();
+        List<Document> kbAllDocs = knowledgeVectorStore.similaritySearch(kbRequest);
+        log.info("[混合检索] 知识库原始检索到 {} 条", kbAllDocs.size());
+
+        List<Document> kbDocs = kbAllDocs.stream()
+                .filter(doc -> {
+                    Object sid = doc.getMetadata().get("scenicId");
+                    log.info("[混合检索] doc metadata keys={}, scenicId={}, type={}",
+                            doc.getMetadata().keySet(), sid, sid == null ? "null" : sid.getClass().getName());
+                    if (sid == null) return false;
+                    if (sid instanceof Long) return ((Long) sid).equals(scenicId);
+                    if (sid instanceof Integer) return ((Integer) sid).equals(scenicId.intValue());
+                    if (sid instanceof String) return sid.toString().equals(scenicId.toString());
+                    return false;
+                })
+                .limit(3)
+                .toList();
+
         if (scenicId != null && scenicId > 0) {
-            kbBuilder.filterExpression("scenicId == " + scenicId);
-            log.info("[混合检索] 使用 scenicId={} 进行过滤检索", scenicId);
+            log.info("[混合检索] scenicId={} 过滤后剩余 {} 条（原始 {} 条）", scenicId, kbDocs.size(), kbAllDocs.size());
         } else {
-            log.info("[混合检索] scenicId 无效（{}），跳过过滤，检索全部数据", scenicId);
+            log.info("[混合检索] 检索到 {} 条", kbDocs.size());
         }
-        List<Document> kbDocs = knowledgeVectorStore.similaritySearch(kbBuilder.build());
 
         StringBuilder kbContext = new StringBuilder();
         for (int i = 0; i < kbDocs.size(); i++) {
@@ -81,12 +97,10 @@ public class HybridRetrievalNode implements NodeAction {
             log.debug("[混合检索] 知识库结果{}: content前50字={}", i,
                     doc.getText().substring(0, Math.min(50, doc.getText().length())));
         }
-        log.info("[混合检索] 知识库检索到 {} 条（阈值=0.3）", kbDocs.size());
 
         // 3. 合并上下文，一次 LLM 生成
         String userText;
         if (faqDocs.isEmpty() && kbDocs.isEmpty()) {
-            // 都没检索到，返回兜底回复
             userText = "游客问题：" + question + "\n\n（未检索到相关信息）";
         } else {
             StringBuilder sb = new StringBuilder();

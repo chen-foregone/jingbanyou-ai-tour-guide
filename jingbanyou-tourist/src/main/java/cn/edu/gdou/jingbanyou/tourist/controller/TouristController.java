@@ -116,7 +116,11 @@ public class TouristController extends BaseController {
             OverAllState result = graph.invoke(initialState)
                     .orElseThrow(() -> new RuntimeException("Graph 执行返回空结果"));
 
-            String answer = (String) result.value(GraphStateKey.ANSWER).orElse("");
+            String answer = result.value(GraphStateKey.ANSWER, String.class)
+                    .filter(s -> !s.isBlank())
+                    .or(() -> result.value(GraphStateKey.CHAT_RESPONSE, String.class).filter(s -> !s.isBlank()))
+                    .or(() -> result.value(GraphStateKey.ROUTE_DESCRIPTION, String.class).filter(s -> !s.isBlank()))
+                    .orElse("");
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
 
             String replyId = "assistant-" + System.currentTimeMillis();

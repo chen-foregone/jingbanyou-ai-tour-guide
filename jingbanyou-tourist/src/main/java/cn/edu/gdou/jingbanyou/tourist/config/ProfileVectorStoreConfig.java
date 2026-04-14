@@ -12,7 +12,6 @@ import redis.clients.jedis.JedisPooled;
 /**
  * 用户画像向量库配置
  * 使用独立索引 profile-index
- * <p>索引由 Spring AI 自动创建和管理（initializeSchema=true）
  */
 @Slf4j
 @Configuration
@@ -29,7 +28,7 @@ public class ProfileVectorStoreConfig {
         return RedisVectorStore.builder(new JedisPooled(redisHost, redisPort), embeddingModel)
                 .indexName("profile-index")
                 .prefix("profile:")
-                .initializeSchema(true)
+                .initializeSchema(false)
                 .build();
     }
 }
