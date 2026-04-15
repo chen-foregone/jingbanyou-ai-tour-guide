@@ -1,6 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist;
 
-import cn.edu.gdou.jingbanyou.tourist.ai.service.DigitalHumanService;
+import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
+import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,37 +18,38 @@ import org.springframework.boot.test.context.SpringBootTest;
 public class AiFeatureTest {
 
     @Autowired
-    private DigitalHumanService digitalHumanService;
+    private TtsService ttsService;
+
+    @Autowired
+    private TranscribeService transcribeService;
 
     /**
-     * 测试智能问答功能（RAG检索增强）
+     * 测试语音合成（TTS）
      */
     @Test
-    public void testAskQuestion() {
-        log.info("开始测试智能问答...");
+    public void testTts() {
+        log.info("开始测试 TTS 语音合成...");
 
-        String question = "请介绍一下这个景区的历史";
-        String answer = digitalHumanService.answerWithRag(question);
+        String text = "欢迎来到景区，我是您的专属 AI 导游。";
+        String sessionId = "test-session-tts";
 
-        log.info("问题：{}", question);
-        log.info("回答：{}", answer);
+        String audioUrl = ttsService.synthesize(text, sessionId, null);
+
+        log.info("文本：{}", text);
+        log.info("音频 URL：{}", audioUrl);
     }
 
     /**
-     * 测试路线推荐功能
+     * 测试语音转文字（ASR）
      */
     @Test
-    public void testRecommendRoute() {
-        log.info("开始测试路线推荐...");
+    public void testTranscribe() {
+        log.info("开始测试 ASR 语音转文字...");
 
-        String interest = "历史文化";
-        Integer duration = 120; // 2 小时
+        // TODO: 需要提供真实的音频文件路径或 byte[] 数据
+        // byte[] audioData = Files.readAllBytes(Paths.get("test.wav"));
+        // String text = transcribeService.transcribe(audioData, "test.wav", "zh");
 
-        String route = digitalHumanService.recommendRoute(interest, duration);
-
-        log.info("兴趣：{}", interest);
-        log.info("时长：{}分钟", duration);
-        log.info("推荐路线：{}", route);
+        log.info("ASR 测试需要音频文件数据，请提供测试音频路径");
     }
-
 }

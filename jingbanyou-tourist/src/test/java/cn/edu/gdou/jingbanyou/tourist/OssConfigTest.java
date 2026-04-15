@@ -1,11 +1,9 @@
 package cn.edu.gdou.jingbanyou.tourist;
 
-import com.aliyun.oss OSS;
-import com.aliyun.oss OSSClientBuilder;
-import com.aliyun.oss.common.auth.DefaultCredential;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.common.auth.Credentials;
 import com.aliyun.oss.model.ListBucketsRequest;
-import com.aliyun.oss.model.ListBucketsResult;
 import lombok.extern.slf4j.Slf4j;
 
 /**

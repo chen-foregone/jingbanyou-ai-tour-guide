@@ -55,13 +55,17 @@ public class MapRouteApiInvokerNode implements NodeAction {
 
         if (llmResponse != null && llmResponse.trim().startsWith("[")) {
             List<Map<String, Object>> rawRoutes = parseRoutes(llmResponse);
-            return state.updateState(Map.of(RAW_ROUTES, rawRoutes));
-        } else {
             return state.updateState(Map.of(
-                    GUIDE_MESSAGE,
-                    llmResponse != null ? llmResponse : "请告诉我您的起点和终点",
-                    RAW_ROUTES,
-                    new ArrayList<>()
+                    RAW_ROUTES, rawRoutes,
+                    ROUTE_STATUS, "success"
+            ));
+        } else {
+            String guideMsg = llmResponse != null ? llmResponse : "请告诉我您的起点和终点";
+            return state.updateState(Map.of(
+                    GUIDE_MESSAGE, guideMsg,
+                    ANSWER, guideMsg,
+                    ROUTE_STATUS, "pending",
+                    RAW_ROUTES, new ArrayList<>()
             ));
         }
     }

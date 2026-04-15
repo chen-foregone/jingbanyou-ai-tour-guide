@@ -63,7 +63,7 @@ public class TtsService {
             }
 
             String fileName = String.format("tts/%s/%d.mp3", sessionId, System.currentTimeMillis());
-            String ossUrl = uploadToOss(audioBytes, fileName, "audio/mpeg");
+            String ossUrl = uploadToOss(audioBytes, fileName);
 
             log.info("[TTS] 合成成功, sessionId={}, 文本长度={}, 音频大小={}KB, OSS URL={}",
                     sessionId, text.length(), audioBytes.length / 1024, ossUrl);
@@ -125,15 +125,13 @@ public class TtsService {
      *
      * @param data     文件字节数据
      * @param fileName OSS 上的文件路径名（不含 bucket 名）
-     * @param mimeType MIME 类型
      * @return OSS 上的音频文件访问 URL
      */
-    private String uploadToOss(byte[] data, String fileName, String mimeType) {
+    private String uploadToOss(byte[] data, String fileName) {
         log.info("[OSS] 开始上传, fileName={}, dataSize={}KB", fileName, data.length / 1024);
         try {
             FileInfo fileInfo = fileStorageService.of(data)
                     .setPath(fileName)
-                    .setContentType(mimeType)
                     .upload();
             String url = fileInfo != null ? fileInfo.getUrl() : "";
             log.info("[OSS] 上传成功, URL={}", url);
@@ -147,4 +145,4 @@ public class TtsService {
             throw e;
         }
     }
-    }
+}

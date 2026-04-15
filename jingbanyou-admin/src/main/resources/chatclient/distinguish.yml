@@ -22,6 +22,7 @@ jingbanyou:
         "这里有什么好玩的" → spot_question
         "从入口到大佛怎么走" → route_plan
         "帮我规划一条路线" → route_plan
+        "我该如何过去" → route_plan
         "你好" → complex_other
         "今天天气怎么样" → complex_other
 

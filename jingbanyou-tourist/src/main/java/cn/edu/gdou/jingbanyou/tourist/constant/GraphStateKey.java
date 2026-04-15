@@ -197,6 +197,14 @@ public final class GraphStateKey {
      */
     public static final String GUIDE_MESSAGE = "guideMessage";
 
+    /**
+     * 路线状态标识
+     * 类型：String
+     * 可选值：success（正常）/ pending（缺参，等待补充信息）
+     * 来源：MapRouteApiInvokerNode
+     */
+    public static final String ROUTE_STATUS = "routeStatus";
+
     // 私有构造函数，防止实例化
     private GraphStateKey() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");

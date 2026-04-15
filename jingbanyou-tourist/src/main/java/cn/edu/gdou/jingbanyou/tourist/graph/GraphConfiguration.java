@@ -106,8 +106,12 @@ public class GraphConfiguration {
         stateGraph.addConditionalEdges(TEXT_DISTINGUISH, intentRouter(), intentRoutingMap());
         stateGraph.addConditionalEdges(MULTIMODAL_DISTINGUISH, intentRouter(), intentRoutingMap());
 
-        // 路线规划路径：API调用 → 润色 → 画像更新 → 结束
-        stateGraph.addEdge(MAP_ROUTE_API_INVOKER, ROUTE_POLISH);
+        // 路线规划路径：成功 → API调用 → 润色 → 画像更新 → 结束
+        // 缺参 → 直接结束（跳过润色和画像更新）
+        stateGraph.addConditionalEdges(MAP_ROUTE_API_INVOKER, routeStatusRouter(), Map.of(
+                "success", ROUTE_POLISH,
+                "pending", StateGraph.END
+        ));
         stateGraph.addEdge(ROUTE_POLISH, PROFILE_UPDATER);
 
         // 景点问答路径：混合检索（FAQ+知识库并行） → 画像更新 → 结束
@@ -142,5 +146,20 @@ public class GraphConfiguration {
                 INTENT_SPOT_QUESTION, HYBRID_RETRIEVAL,
                 INTENT_COMPLEX_OTHER, GENERAL_CHAT_FALLBACK
         );
+    }
+
+    /**
+     * 路线状态路由：读取 ROUTE_STATUS 值
+     * - success → 继续润色流程
+     * - pending → 直接结束
+     */
+    private AsyncEdgeAction routeStatusRouter() {
+        return new AsyncEdgeAction() {
+            @Override
+            public CompletableFuture<String> apply(OverAllState state) {
+                String status = state.value(GraphStateKey.ROUTE_STATUS).orElse("success").toString();
+                return CompletableFuture.completedFuture(status);
+            }
+        };
     }
 }
