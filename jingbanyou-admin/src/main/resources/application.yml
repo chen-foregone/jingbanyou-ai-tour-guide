@@ -140,7 +140,6 @@ spring:
     thumbnail-suffix: .min.jpg
     aliyun-oss:
       - platform: aliyun-oss-1
-        enable-storage: true
         endpoint: oss-cn-beijing.aliyuncs.com
         access-key: LTAI5t5nJGzDbFXWaqVktKAK
         secret-key: jM0BTeIOXmHMJd6n2v7WGATfnTC63C
