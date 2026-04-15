@@ -130,7 +130,6 @@ public class TtsService {
      */
     private String uploadToOss(byte[] data, String fileName, String mimeType) {
         log.info("[OSS] 开始上传, fileName={}, dataSize={}KB", fileName, data.length / 1024);
-        log.info("[OSS] 可用平台列表: {}", getAvailablePlatforms());
         try {
             FileInfo fileInfo = fileStorageService.of(data)
                     .setPath(fileName)
@@ -148,18 +147,4 @@ public class TtsService {
             throw e;
         }
     }
-
-    /**
-     * 获取当前可用的存储平台列表
-     */
-    private String getAvailablePlatforms() {
-        try {
-            return fileStorageService.getFileStorageServiceList().stream()
-                    .map(s -> s.getPlatform())
-                    .reduce((a, b) -> a + ", " + b)
-                    .orElse("无");
-        } catch (Exception e) {
-            return "获取失败: " + e.getMessage();
-        }
     }
-}

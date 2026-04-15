@@ -1,7 +1,9 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -21,20 +23,14 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
  */
 @Slf4j
 @Component
-public class MultimodalDistinguishNode extends BaseDistinguishNode {
+public class MultimodalDistinguishNode implements NodeAction {
+
+    private final ChatClient chatClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MultimodalDistinguishNode(
             @Qualifier("multimodalDistinguishChatClient") ChatClient chatClient) {
-        super(chatClient);
-    }
-
-    /**
-     * 不使用父类的 apply()，所以此方法不会被调用
-     * 但抽象方法要求必须实现
-     */
-    @Override
-    protected String getSystemPrompt() {
-        return "";
+        this.chatClient = chatClient;
     }
 
     @Override
