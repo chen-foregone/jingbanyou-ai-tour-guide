@@ -10,14 +10,23 @@ import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.GraphConfiguration;
 import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
+import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
 import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import java.util.*;
 
@@ -38,6 +47,7 @@ public class TouristController extends BaseController {
     private final GraphConfiguration graphConfiguration;
     private final TranscribeService transcribeService;
     private final ChatMemoryService chatMemoryService;
+    private final TtsService ttsService;
 
     /**
      * 前台首屏初始化
@@ -117,6 +127,17 @@ public class TouristController extends BaseController {
             String answer = result.value(GraphStateKey.ANSWER, String.class).orElse("");
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
 
+            // 调用 TTS 并记录耗时
+            String audioUrl = "";
+            long ttsStart = System.currentTimeMillis();
+            if (answer != null && !answer.isBlank()) {
+                DigitalHumanConfig dh = scenicId != null
+                        ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
+                audioUrl = ttsService.synthesize(answer, dh);
+            }
+            long ttsCost = System.currentTimeMillis() - ttsStart;
+            log.info("[TTS] 合成耗时: {}ms", ttsCost);
+
             String replyId = "assistant-" + System.currentTimeMillis();
             Map<String, Object> reply = new LinkedHashMap<>();
             reply.put("id", replyId);
@@ -134,12 +155,11 @@ public class TouristController extends BaseController {
                 reply.put("attachments", List.of());
             }
 
-            Map<String, Object> voice = Map.of("audioUrl", "");
-
             return success(Map.of(
                     "reply", reply,
                     "intent", intent,
-                    "voice", voice
+                    "voice", Map.of("audioUrl", audioUrl),
+                    "ttsCostMs", ttsCost
             ));
 
         } catch (Exception e) {
@@ -253,5 +273,58 @@ public class TouristController extends BaseController {
 
         chatMemoryService.syncToMySQL(sessionId, scenicId, visitorId);
         return success("会话已保存");
+    }
+
+    /**
+     * TTS 语音合成
+     *
+     * @param text      合成文本
+     * @param scenicId  景区ID（可选，用于获取数字人配置）
+     * @return 音频文件访问路径
+     */
+    @GetMapping("/tts")
+    public AjaxResult tts(
+            @RequestParam String text,
+            @RequestParam(required = false) Long scenicId) {
+
+        if (text == null || text.isBlank()) {
+            return error("文本不能为空");
+        }
+
+        DigitalHumanConfig digitalHuman = null;
+        if (scenicId != null) {
+            digitalHuman = digitalHumanConfigService.getDefaultByScenicId(scenicId);
+        }
+
+        log.info("[TTS] text长度={}, voice={}",
+                text.length(),
+                digitalHuman != null ? digitalHuman.getTtsVoiceCode() : "默认");
+
+        String audioUrl = ttsService.synthesize(text, digitalHuman);
+
+        if (audioUrl == null || audioUrl.isBlank()) {
+            return error("语音合成失败");
+        }
+
+        return success(Map.of("audioUrl", audioUrl));
+    }
+
+    /**
+     * TTS 音频文件访问
+     *
+     * @param filename 音频文件名
+     * @return 音频文件
+     */
+    @GetMapping("/tts/{filename}")
+    public ResponseEntity<byte[]> ttsAudio(@PathVariable String filename) throws IOException {
+        Path audioPath = Paths.get("/tmp/tts", filename);
+        if (!Files.exists(audioPath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] audioBytes = Files.readAllBytes(audioPath);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("audio/wav"))
+                .body(audioBytes);
     }
 }
