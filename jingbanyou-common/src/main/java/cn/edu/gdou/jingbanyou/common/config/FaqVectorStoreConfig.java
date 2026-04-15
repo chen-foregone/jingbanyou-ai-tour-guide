@@ -46,7 +46,7 @@ public class FaqVectorStoreConfig {
         return RedisVectorStore.builder(new JedisPooled(redisHost, redisPort), embeddingModel)
                 .indexName("faq-index")
                 .prefix("faq:")
-                .initializeSchema(false)
+                .initializeSchema(true)
                 .metadataFields(
                         MetadataField.tag("scenicId"),
                         MetadataField.tag("faqId")

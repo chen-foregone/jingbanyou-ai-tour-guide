@@ -11,7 +11,6 @@ import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.GraphConfiguration;
 import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
 import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
-import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -37,7 +36,6 @@ public class TouristController extends BaseController {
     private final IScenicAreaService scenicAreaService;
     private final IDigitalHumanConfigService digitalHumanConfigService;
     private final GraphConfiguration graphConfiguration;
-    private final TtsService ttsService;
     private final TranscribeService transcribeService;
     private final ChatMemoryService chatMemoryService;
 
@@ -116,11 +114,7 @@ public class TouristController extends BaseController {
             OverAllState result = graph.invoke(initialState)
                     .orElseThrow(() -> new RuntimeException("Graph 执行返回空结果"));
 
-            String answer = result.value(GraphStateKey.ANSWER, String.class)
-                    .filter(s -> !s.isBlank())
-                    .or(() -> result.value(GraphStateKey.CHAT_RESPONSE, String.class).filter(s -> !s.isBlank()))
-                    .or(() -> result.value(GraphStateKey.ROUTE_DESCRIPTION, String.class).filter(s -> !s.isBlank()))
-                    .orElse("");
+            String answer = result.value(GraphStateKey.ANSWER, String.class).orElse("");
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
 
             String replyId = "assistant-" + System.currentTimeMillis();
@@ -140,10 +134,7 @@ public class TouristController extends BaseController {
                 reply.put("attachments", List.of());
             }
 
-            DigitalHumanConfig dh = scenicId != null
-                    ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
-            String audioUrl = ttsService.synthesize(answer, sessionId, dh);
-            Map<String, Object> voice = Map.of("audioUrl", audioUrl);
+            Map<String, Object> voice = Map.of("audioUrl", "");
 
             return success(Map.of(
                     "reply", reply,
@@ -207,41 +198,6 @@ public class TouristController extends BaseController {
             tags.add(route.get("strategy").toString());
         }
         return tags;
-    }
-
-    /**
-     * 文本转语音
-     * @param request 包含 text、sessionId、scenicId
-     * @return 语音文件地址
-     */
-    @PostMapping("/tts")
-    public AjaxResult tts(@RequestBody Map<String, Object> request) {
-        String text = (String) request.get("text");
-        Object scenicIdObj = request.get("scenicId");
-        String sessionId = (String) request.get("sessionId");
-
-        if (text == null || text.isBlank()) {
-            return error("文本内容不能为空");
-        }
-        if (sessionId == null || sessionId.isBlank()) {
-            return error("sessionId 不能为空");
-        }
-
-        DigitalHumanConfig digitalHuman = null;
-        if (scenicIdObj != null) {
-            Long scenicId = scenicIdObj instanceof Number
-                    ? ((Number) scenicIdObj).longValue()
-                    : Long.parseLong(scenicIdObj.toString());
-            digitalHuman = digitalHumanConfigService.getDefaultByScenicId(scenicId);
-        }
-
-        String audioUrl = ttsService.synthesize(text, sessionId, digitalHuman);
-
-        if (audioUrl == null || audioUrl.isEmpty()) {
-            return error("语音合成失败");
-        }
-
-        return success(Map.of("audioUrl", audioUrl));
     }
 
     /**

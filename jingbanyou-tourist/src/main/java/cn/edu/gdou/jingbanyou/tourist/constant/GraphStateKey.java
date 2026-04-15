@@ -70,13 +70,6 @@ public final class GraphStateKey {
     public static final String ROUTE_DATA = "routeData";
     
     /**
-     * 路线描述（自然语言）
-     * 类型：String
-     * 来源：MapRouteApiInvokerNode
-     */
-    public static final String ROUTE_DESCRIPTION = "routeDescription";
-
-    /**
      * 多条原始路线数据（从MCP获取）
      * 类型：List<Map> 每条路线包含 strategy(策略)、distance(距离)、duration(时长)、steps(步骤)
      * 来源：MapRouteApiInvokerNode
@@ -109,15 +102,7 @@ public final class GraphStateKey {
     
     // ==================== 通用聊天相关 ====================
     
-    /**
-     * 闲聊回复
-     * 类型：String
-     * 来源：GeneralChatFallbackNode
-     */
-    public static final String CHAT_RESPONSE = "chatResponse";
-    
-    // ==================== 元数据相关 ====================
-    
+
     /**
      * 当前节点名称
      * 类型：String

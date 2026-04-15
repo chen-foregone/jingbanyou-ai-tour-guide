@@ -55,10 +55,7 @@ public class ProfileUpdaterNode implements NodeAction {
                 .orElse(new VisitorProfile());
 
         String question = state.value(QUESTION, String.class).orElse("");
-        String answer = state.value(ANSWER, String.class)
-                .or(() -> state.value(CHAT_RESPONSE, String.class))
-                .or(() -> state.value(ROUTE_DESCRIPTION, String.class))
-                .orElse("");
+        String answer = state.value(ANSWER, String.class).orElse("");
 
         List<String> newTags = extractTags(question, answer);
 

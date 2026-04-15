@@ -61,7 +61,10 @@ public class RoutePolishNode implements NodeAction {
         log.info("[路线润色] 输出: {}", polishedJson);
 
         List<Map<String, Object>> polishedRoutes = parsePolishedRoutes(polishedJson);
-        return state.updateState(Map.of(POLISHED_ROUTES, polishedRoutes));
+        return state.updateState(Map.of(
+                ANSWER, polishedJson != null ? polishedJson : "",
+                POLISHED_ROUTES, polishedRoutes
+        ));
     }
 
     private String buildProfileDescription(VisitorProfile profile) {

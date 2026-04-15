@@ -48,7 +48,7 @@ public class KnowledgeVectorStoreConfig {
         return RedisVectorStore.builder(jedis, embeddingModel)
                 .indexName("doc-index")
                 .prefix("doc:")
-                .initializeSchema(false)
+                .initializeSchema(true)
                 .metadataFields(
                         MetadataField.numeric("scenicId"),
                         MetadataField.numeric("docId"),

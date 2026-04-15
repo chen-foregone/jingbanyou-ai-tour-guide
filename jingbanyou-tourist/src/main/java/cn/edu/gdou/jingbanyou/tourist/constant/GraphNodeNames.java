@@ -50,7 +50,7 @@ public final class GraphNodeNames {
      * 地图路线 API 调用节点
      * 功能：调用地图服务 API 获取路线数据
      * 输入：QUESTION, SCENIC_ID
-     * 输出：RAW_ROUTES, ROUTE_DESCRIPTION, GUIDE_MESSAGE（缺参时）
+     * 输出：RAW_ROUTES, GUIDE_MESSAGE（缺参时）
      */
     public static final String MAP_ROUTE_API_INVOKER = "mapRouteApiInvoker";
     
@@ -58,7 +58,7 @@ public final class GraphNodeNames {
      * 路线润色节点
      * 功能：结合用户画像对多条路线进行个性化润色
      * 输入：RAW_ROUTES, VISITOR_PROFILE
-     * 输出：POLISHED_ROUTES
+     * 输出：ANSWER, POLISHED_ROUTES
      */
     public static final String ROUTE_POLISH = "routePolish";
     
@@ -78,7 +78,7 @@ public final class GraphNodeNames {
      * 通用聊天兜底节点
      * 功能：处理闲聊、问候等非业务相关问题
      * 输入：QUESTION, HISTORY
-     * 输出：CHAT_RESPONSE
+     * 输出：ANSWER
      */
     public static final String GENERAL_CHAT_FALLBACK = "generalChatFallback";
     

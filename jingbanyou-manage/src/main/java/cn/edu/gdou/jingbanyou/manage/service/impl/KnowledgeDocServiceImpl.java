@@ -7,6 +7,7 @@ import cn.edu.gdou.jingbanyou.manage.mapper.KnowledgeDocMapper;
 import cn.edu.gdou.jingbanyou.manage.service.IKnowledgeDocService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
@@ -35,6 +36,8 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
     @Autowired
     @Qualifier("knowledgeVectorStore")
     private VectorStore knowledgeVectorStore;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** Embedding 模型版本（从配置读取） */
     @Value("${spring.ai.dashscope.embedding.options.model:text-embedding-v2}")
@@ -87,6 +90,12 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
             chunk.setVectorId(splitDoc.getId());
             chunk.setEmbeddingVersion(embeddingModel);
             chunk.setCreateTime(new Date());
+            // 保存元数据到 MySQL（与 Redis 向量库保持一致）
+            try {
+                chunk.setMetadata(objectMapper.writeValueAsString(metadata));
+            } catch (Exception e) {
+                log.warn("元数据序列化失败，跳过: {}", e.getMessage());
+            }
             knowledgeChunkMapper.insert(chunk);
 
             log.debug("Chunk {} 写入完成: vectorId={}", i, splitDoc.getId());
