@@ -100,7 +100,7 @@ public final class GraphNodeNames {
      * 注意：异步写入 Redis（TTL 24h）
      */
     public static final String PROFILE_UPDATER = "profileUpdater";
-    
+
     // ==================== 特殊节点 ====================
     
     /**

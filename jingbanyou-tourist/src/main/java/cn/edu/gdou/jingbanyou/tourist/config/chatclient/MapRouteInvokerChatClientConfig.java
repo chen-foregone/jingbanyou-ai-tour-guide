@@ -3,6 +3,8 @@ package cn.edu.gdou.jingbanyou.tourist.config.chatclient;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,16 +22,22 @@ public class MapRouteInvokerChatClientConfig {
     private ModelConfig model;
 
     @Bean("mapRouteInvokerChatClient")
-    public ChatClient chatClient(ChatClient.Builder builder) {
+    public ChatClient chatClient(ChatClient.Builder builder,
+                                 MessageChatMemoryAdvisor chatMemoryAdvisor,
+                                 ToolCallbackProvider toolCallbackProvider) {
         DashScopeChatOptions options = DashScopeChatOptions.builder()
                 .withModel(model.getName())
                 .withTemperature(model.getTemperature())
                 .withTopP(model.getTopP())
                 .withMaxToken(model.getMaxTokens())
                 .build();
-        // MCP 工具已在 application.yml 中全局启用 (spring.ai.dashscope.mcp.client.toolcallback.enabled: true)
-        // 此处不需额外注册工具，LLM 会根据 system prompt 自主调用 amap MCP 工具
-        return builder.defaultSystem(prompt).defaultOptions(options).build();
+
+        return builder
+                .defaultSystem(prompt)
+                .defaultAdvisors(chatMemoryAdvisor)
+                .defaultToolCallbacks(toolCallbackProvider)
+                .defaultOptions(options)
+                .build();
     }
 
     @Data

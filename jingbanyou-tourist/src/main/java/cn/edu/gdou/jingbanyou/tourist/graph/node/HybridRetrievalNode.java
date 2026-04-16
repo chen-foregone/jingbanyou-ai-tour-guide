@@ -1,5 +1,6 @@
 package cn.edu.gdou.jingbanyou.tourist.graph.node;
 
+import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -41,9 +43,9 @@ public class HybridRetrievalNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
-        String question = state.value("question", String.class).orElse("");
-        Long scenicId = state.value("scenicId", Long.class).orElse(0L);
-        String sessionId = state.value("sessionId", String.class).orElse(null);
+        String question = state.value(QUESTION, String.class).orElse("");
+        Long scenicId = state.value(SCENIC_ID, Long.class).orElse(0L);
+        String sessionId = state.value(SESSION_ID, String.class).orElse(null);
 
         log.info("[混合检索] 开始: question={}, scenicId={}", question, scenicId);
 
@@ -61,34 +63,16 @@ public class HybridRetrievalNode implements NodeAction {
         }
         log.info("[混合检索] FAQ检索到 {} 条", faqDocs.size());
 
-        // 2. 查询景区知识向量库（Java 层过滤 scenicId）
-        SearchRequest kbRequest = SearchRequest.builder()
+        // 2. 查询景区知识向量库（使用 scenicId 过滤器，在 Redis 层直接过滤）
+        SearchRequest.Builder kbRequestBuilder = SearchRequest.builder()
                 .query(question)
-                .topK(10)
-                .similarityThreshold(0.0)
-                .build();
-        List<Document> kbAllDocs = knowledgeVectorStore.similaritySearch(kbRequest);
-        log.info("[混合检索] 知识库原始检索到 {} 条", kbAllDocs.size());
-
-        List<Document> kbDocs = kbAllDocs.stream()
-                .filter(doc -> {
-                    Object sid = doc.getMetadata().get("scenicId");
-                    log.info("[混合检索] doc metadata keys={}, scenicId={}, type={}",
-                            doc.getMetadata().keySet(), sid, sid == null ? "null" : sid.getClass().getName());
-                    if (sid == null) return false;
-                    if (sid instanceof Long) return ((Long) sid).equals(scenicId);
-                    if (sid instanceof Integer) return ((Integer) sid).equals(scenicId.intValue());
-                    if (sid instanceof String) return sid.toString().equals(scenicId.toString());
-                    return false;
-                })
-                .limit(3)
-                .toList();
-
+                .topK(5)
+                .similarityThreshold(0.0);
         if (scenicId != null && scenicId > 0) {
-            log.info("[混合检索] scenicId={} 过滤后剩余 {} 条（原始 {} 条）", scenicId, kbDocs.size(), kbAllDocs.size());
-        } else {
-            log.info("[混合检索] 检索到 {} 条", kbDocs.size());
+            kbRequestBuilder.filterExpression(new FilterExpressionBuilder().eq("scenicId", scenicId).build());
         }
+        List<Document> kbDocs = knowledgeVectorStore.similaritySearch(kbRequestBuilder.build());
+        log.info("[混合检索] scenicId={} 知识库检索到 {} 条", scenicId, kbDocs.size());
 
         StringBuilder kbContext = new StringBuilder();
         for (int i = 0; i < kbDocs.size(); i++) {
@@ -129,6 +113,6 @@ public class HybridRetrievalNode implements NodeAction {
 
         log.info("[混合检索] 生成结果: {}", content);
 
-        return state.updateState(Map.of("answer", content));
+        return state.updateState(Map.of(ANSWER, content));
     }
 }

@@ -67,6 +67,12 @@ spring:
   config:
     import: classpath:chatclient/hybrid-retrieval.yml,classpath:chatclient/route-polish.yml,classpath:chatclient/profile-update.yml,classpath:chatclient/map-route-invoker.yml,classpath:chatclient/general-chat.yml,classpath:chatclient/distinguish.yml
   ai:
+    mcp:
+      client:
+        stdio:
+          servers-configuration: classpath:/mcp-servers-config.json
+        toolcallback:
+          enabled: true
     dashscope:
       api-key: ${DASHSCOPE_API_KEY:}
       chat:
@@ -85,12 +91,6 @@ spring:
         enabled: true
         options:
           model: text-embedding-v2
-      mcp:
-        client:
-          stdio:
-            servers-configuration: classpath:/mcp-servers-config.json # 指定 MCP 服务的配置文件路径
-          toolcallback:
-            enabled: true # 开启 MCP 客户端的工具回调（Tool Callback）功能
       audio:
         speech:
           # 使用通义语音合成模型 cosyvoice-v3-flash（最快模型）

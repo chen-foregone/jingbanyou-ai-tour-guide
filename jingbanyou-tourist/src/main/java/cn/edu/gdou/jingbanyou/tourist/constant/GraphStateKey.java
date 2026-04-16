@@ -63,13 +63,6 @@ public final class GraphStateKey {
     // ==================== 路线规划相关 ====================
 
     /**
-     * 路线数据（结构化）
-     * 类型：String（JSON 格式）
-     * 来源：地图 API / 路径规划服务
-     */
-    public static final String ROUTE_DATA = "routeData";
-    
-    /**
      * 多条原始路线数据（从MCP获取）
      * 类型：List<Map> 每条路线包含 strategy(策略)、distance(距离)、duration(时长)、steps(步骤)
      * 来源：MapRouteApiInvokerNode

@@ -8,6 +8,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
@@ -43,12 +45,13 @@ public class MapRouteApiInvokerNode implements NodeAction {
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
         String question = state.value(QUESTION, String.class).orElse("");
+        String sessionId = state.value(SESSION_ID, String.class).orElse(null);
 
-        log.info("[路线规划调用] 输入: question={}", question);
-        String userText = "用户问题：" + question;
-        log.info("[路线规划调用] userText={}", userText);
+        log.info("[路线规划调用] 输入: question={}, sessionId={}", question, sessionId);
         String llmResponse = chatClient.prompt()
-                .user(userText)
+                .user("用户问题：" + question)
+                .advisors(new SimpleLoggerAdvisor())
+                .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
                 .call()
                 .content();
         log.info("[路线规划调用] 模型输出: {}", llmResponse);

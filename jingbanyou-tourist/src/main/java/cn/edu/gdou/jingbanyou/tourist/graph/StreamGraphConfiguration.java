@@ -1,7 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.graph;
 
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
-import cn.edu.gdou.jingbanyou.tourist.graph.GraphConfiguration;
+import cn.edu.gdou.jingbanyou.tourist.graph.node.*;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
@@ -24,29 +24,33 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphNodeNames.*;
 
 /**
  * 流式对话 Graph 配置
- * 流程与 GraphConfiguration 一致，但最终答案节点使用流式版本
- * 流式结果由 StreamChatController 通过 StreamGraphConfiguration.compiledGraph() 获取后处理
+ * 所有节点直接执行业务逻辑，结果写入 state
+ * Controller 读取 state.ANSWER 进行流式发送
  */
 @Configuration
 public class StreamGraphConfiguration {
 
-    // 声明所有节点
+    // 意图识别节点
     @Autowired
     private NodeAction textDistinguishNode;
     @Autowired
     private NodeAction multimodalDistinguishNode;
-    @Autowired
-    private NodeAction generalChatFallbackNode;
-    @Autowired
-    private NodeAction mapRouteApiInvokerNode;
+
+    // 用户画像节点
     @Autowired
     private NodeAction profileLoaderNode;
     @Autowired
     private NodeAction profileUpdaterNode;
+
+    // 业务处理节点（直接执行业务逻辑，写入 state）
     @Autowired
-    private NodeAction routePolishNode;
+    private NodeAction mapRouteApiInvokerNode;
     @Autowired
     private NodeAction hybridRetrievalNode;
+    @Autowired
+    private NodeAction generalChatFallbackNode;
+    @Autowired
+    private NodeAction routePolishNode;
 
     @Bean
     public CompiledGraph streamCompiledGraph() throws GraphStateException {
@@ -59,20 +63,27 @@ public class StreamGraphConfiguration {
             strategies.put(GraphStateKey.LANGUAGE, new ReplaceStrategy());
             strategies.put(GraphStateKey.VISITOR_ID, new ReplaceStrategy());
             strategies.put(GraphStateKey.AUDIO_DATA, new ReplaceStrategy());
+            strategies.put(GraphStateKey.ANSWER, new ReplaceStrategy());
+            strategies.put(GraphStateKey.INTENT, new ReplaceStrategy());
+            strategies.put(GraphStateKey.RAW_ROUTES, new ReplaceStrategy());
+            strategies.put(GraphStateKey.POLISHED_ROUTES, new ReplaceStrategy());
+            strategies.put(GraphStateKey.ROUTE_STATUS, new ReplaceStrategy());
+            strategies.put(GraphStateKey.GUIDE_MESSAGE, new ReplaceStrategy());
+            strategies.put(GraphStateKey.VISITOR_PROFILE, new ReplaceStrategy());
             return strategies;
         };
 
         StateGraph stateGraph = new StateGraph(keyStrategyFactory);
 
-        // 添加所有节点（与 GraphConfiguration 完全一致）
+        // 添加所有节点
         stateGraph.addNode(TEXT_DISTINGUISH, AsyncNodeAction.node_async(textDistinguishNode));
         stateGraph.addNode(MULTIMODAL_DISTINGUISH, AsyncNodeAction.node_async(multimodalDistinguishNode));
-        stateGraph.addNode(GENERAL_CHAT_FALLBACK, AsyncNodeAction.node_async(generalChatFallbackNode));
-        stateGraph.addNode(MAP_ROUTE_API_INVOKER, AsyncNodeAction.node_async(mapRouteApiInvokerNode));
         stateGraph.addNode(PROFILE_LOADER, AsyncNodeAction.node_async(profileLoaderNode));
         stateGraph.addNode(PROFILE_UPDATER, AsyncNodeAction.node_async(profileUpdaterNode));
-        stateGraph.addNode(ROUTE_POLISH, AsyncNodeAction.node_async(routePolishNode));
+        stateGraph.addNode(MAP_ROUTE_API_INVOKER, AsyncNodeAction.node_async(mapRouteApiInvokerNode));
         stateGraph.addNode(HYBRID_RETRIEVAL, AsyncNodeAction.node_async(hybridRetrievalNode));
+        stateGraph.addNode(GENERAL_CHAT_FALLBACK, AsyncNodeAction.node_async(generalChatFallbackNode));
+        stateGraph.addNode(ROUTE_POLISH, AsyncNodeAction.node_async(routePolishNode));
 
         // START → ProfileLoader
         stateGraph.addEdge(StateGraph.START, PROFILE_LOADER);
@@ -97,7 +108,7 @@ public class StreamGraphConfiguration {
         // 路线规划路径
         stateGraph.addConditionalEdges(MAP_ROUTE_API_INVOKER, routeStatusRouter(), Map.of(
                 "success", ROUTE_POLISH,
-                "pending", StateGraph.END
+                "pending", PROFILE_UPDATER
         ));
         stateGraph.addEdge(ROUTE_POLISH, PROFILE_UPDATER);
 
@@ -123,9 +134,9 @@ public class StreamGraphConfiguration {
 
     private Map<String, String> intentRoutingMap() {
         return Map.of(
-                GraphConfiguration.INTENT_ROUTE_PLAN, MAP_ROUTE_API_INVOKER,
-                GraphConfiguration.INTENT_SPOT_QUESTION, HYBRID_RETRIEVAL,
-                GraphConfiguration.INTENT_COMPLEX_OTHER, GENERAL_CHAT_FALLBACK
+                StreamGraphConfiguration.INTENT_ROUTE_PLAN, MAP_ROUTE_API_INVOKER,
+                StreamGraphConfiguration.INTENT_SPOT_QUESTION, HYBRID_RETRIEVAL,
+                StreamGraphConfiguration.INTENT_COMPLEX_OTHER, GENERAL_CHAT_FALLBACK
         );
     }
 
@@ -138,4 +149,9 @@ public class StreamGraphConfiguration {
             }
         };
     }
+
+    // 意图常量
+    public static final String INTENT_ROUTE_PLAN = "route_plan";
+    public static final String INTENT_SPOT_QUESTION = "spot_question";
+    public static final String INTENT_COMPLEX_OTHER = "complex_other";
 }

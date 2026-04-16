@@ -8,7 +8,7 @@ import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
 import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
-import cn.edu.gdou.jingbanyou.tourist.graph.GraphConfiguration;
+import cn.edu.gdou.jingbanyou.tourist.graph.StreamGraphConfiguration;
 import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
 import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
 import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
@@ -20,15 +20,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
+import cn.hutool.extra.emoji.EmojiUtil;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import java.util.Base64;
 
 /**
  * 前台游客端
@@ -44,7 +49,7 @@ public class TouristController extends BaseController {
 
     private final IScenicAreaService scenicAreaService;
     private final IDigitalHumanConfigService digitalHumanConfigService;
-    private final GraphConfiguration graphConfiguration;
+    private final StreamGraphConfiguration streamGraphConfiguration;
     private final TranscribeService transcribeService;
     private final ChatMemoryService chatMemoryService;
     private final TtsService ttsService;
@@ -85,23 +90,16 @@ public class TouristController extends BaseController {
     }
 
     /**
-     * 文本对话
-     * @param request 包含 message、sessionId、scenicId
-     * @return AI回复、意图、语音
+     * 文本对话（直接返回答案）
+     * Graph 节点直接执行业务逻辑，结果写入 state.ANSWER，Controller 直接返回
      */
     @PostMapping("/chat")
     public AjaxResult chat(@RequestBody Map<String, Object> request) {
         String message = (String) request.get("message");
-        // 打印字节十六进制
-        StringBuilder hex = new StringBuilder();
-        for (byte b : message.getBytes(java.nio.charset.StandardCharsets.UTF_8)) {
-            hex.append(String.format("%02X ", b));
-        }
-        log.info("[Chat入口] message={}, UTF-8 bytes: {}", message, hex);
         String sessionId = (String) request.get("sessionId");
         Long scenicId = request.get("scenicId") != null
                 ? ((Number) request.get("scenicId")).longValue() : null;
-        log.info("[Chat入口] scenicId={}, requestBody={}", scenicId, request);
+        log.info("[Chat入口] message={}, sessionId={}, scenicId={}", message, sessionId, scenicId);
 
         if (message == null || message.isBlank()) {
             return error("消息内容不能为空");
@@ -111,46 +109,61 @@ public class TouristController extends BaseController {
         }
 
         try {
-            Map<String, Object> initialState = new HashMap<>();
-            initialState.put(GraphStateKey.SESSION_ID, sessionId);
-            initialState.put(GraphStateKey.QUESTION, message);
-            initialState.put(GraphStateKey.HISTORY, "");
-            initialState.put(GraphStateKey.LANGUAGE, "zh");
-            if (scenicId != null) {
-                initialState.put(GraphStateKey.SCENIC_ID, scenicId);
-            }
-
-            CompiledGraph graph = graphConfiguration.compiledGraph();
-            OverAllState result = graph.invoke(initialState)
-                    .orElseThrow(() -> new RuntimeException("Graph 执行返回空结果"));
+            long totalStart = System.currentTimeMillis();
+            long graphStart = System.currentTimeMillis();
+            OverAllState result = executeGraph(message, sessionId, scenicId);
+            long graphCost = System.currentTimeMillis() - graphStart;
+            log.info("[Chat] Graph执行耗时: {}ms", graphCost);
 
             String answer = result.value(GraphStateKey.ANSWER, String.class).orElse("");
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
 
-            // 调用 TTS 并记录耗时
+            // pending 场景返回引导语
+            String routeStatus = (String) result.value(GraphStateKey.ROUTE_STATUS).orElse(null);
+            if ("pending".equals(routeStatus)) {
+                String guideMessage = (String) result.value(GraphStateKey.GUIDE_MESSAGE)
+                        .orElse("请告诉我您的起点和终点");
+                return success(Map.of(
+                        "reply", Map.of("id", "assistant-" + System.currentTimeMillis(),
+                                "role", "assistant", "content", guideMessage),
+                        "intent", intent,
+                        "attachments", List.of()
+                ));
+            }
+
+            // 调用 TTS
             String audioUrl = "";
             long ttsStart = System.currentTimeMillis();
             if (answer != null && !answer.isBlank()) {
+                List<?> rawRoutes = null;
+                if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
+                    rawRoutes = result.value(GraphStateKey.POLISHED_ROUTES, List.class).orElse(null);
+                }
+                String ttsText = answer;
+                if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent) && rawRoutes != null && !rawRoutes.isEmpty()) {
+                    ttsText = buildRouteNarration(rawRoutes);
+                }
+                // 过滤 emoji，避免 CosyVoice 报 418 错误
+                ttsText = ttsText != null ? EmojiUtil.removeAllEmojis(ttsText) : "";
+                if (ttsText.length() > 500) {
+                    ttsText = ttsText.substring(0, 500);
+                }
                 DigitalHumanConfig dh = scenicId != null
                         ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
-                audioUrl = ttsService.synthesize(answer, dh);
+                audioUrl = ttsService.synthesize(ttsText, dh);
             }
             long ttsCost = System.currentTimeMillis() - ttsStart;
             log.info("[TTS] 合成耗时: {}ms", ttsCost);
 
-            String replyId = "assistant-" + System.currentTimeMillis();
             Map<String, Object> reply = new LinkedHashMap<>();
-            reply.put("id", replyId);
+            reply.put("id", "assistant-" + System.currentTimeMillis());
             reply.put("role", "assistant");
             reply.put("content", answer);
 
-            if (GraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
+            if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
                 List<?> rawRoutes = result.value(GraphStateKey.POLISHED_ROUTES, List.class).orElse(null);
-                if (rawRoutes != null && !rawRoutes.isEmpty()) {
-                    reply.put("attachments", buildRouteAttachments(rawRoutes));
-                } else {
-                    reply.put("attachments", List.of());
-                }
+                reply.put("attachments", rawRoutes != null && !rawRoutes.isEmpty()
+                        ? buildRouteAttachments(rawRoutes) : List.of());
             } else {
                 reply.put("attachments", List.of());
             }
@@ -159,7 +172,9 @@ public class TouristController extends BaseController {
                     "reply", reply,
                     "intent", intent,
                     "voice", Map.of("audioUrl", audioUrl),
-                    "ttsCostMs", ttsCost
+                    "graphCostMs", graphCost,
+                    "ttsCostMs", ttsCost,
+                    "totalCostMs", System.currentTimeMillis() - totalStart
             ));
 
         } catch (Exception e) {
@@ -183,9 +198,22 @@ public class TouristController extends BaseController {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", "route-" + i);
             item.put("title", route.getOrDefault("description", route.getOrDefault("title", "推荐路线")));
-            item.put("summary", buildRouteSummary(route));
             item.put("duration", route.getOrDefault("duration", ""));
-            item.put("tags", buildRouteTags(route));
+            // summary
+            StringBuilder summary = new StringBuilder();
+            if (route.get("suitableFor") != null) {
+                summary.append("适合：").append(route.get("suitableFor"));
+            }
+            if (route.get("tips") != null) {
+                if (summary.length() > 0) summary.append(" | ");
+                summary.append("提示：").append(route.get("tips"));
+            }
+            item.put("summary", summary.toString());
+            // tags
+            List<String> tags = new ArrayList<>();
+            if (route.get("suitableFor") != null) tags.add(route.get("suitableFor").toString());
+            if (route.get("strategy") != null) tags.add(route.get("strategy").toString());
+            item.put("tags", tags);
             items.add(item);
         }
 
@@ -197,6 +225,199 @@ public class TouristController extends BaseController {
         return attachments;
     }
 
+    /**
+     * 执行 Graph 并返回结果
+     */
+    private OverAllState executeGraph(String message, String sessionId, Long scenicId) throws Exception {
+        Map<String, Object> initialState = new HashMap<>();
+        initialState.put(GraphStateKey.SESSION_ID, sessionId);
+        initialState.put(GraphStateKey.QUESTION, message);
+        initialState.put(GraphStateKey.HISTORY, "");
+        initialState.put(GraphStateKey.LANGUAGE, "zh");
+        if (scenicId != null) {
+            initialState.put(GraphStateKey.SCENIC_ID, scenicId);
+        }
+        CompiledGraph graph = streamGraphConfiguration.streamCompiledGraph();
+        return graph.invoke(initialState)
+                .orElseThrow(() -> new RuntimeException("Graph 执行返回空结果"));
+    }
+
+    /**
+     * 流式对话接口
+     * Graph 节点直接执行业务逻辑，结果写入 state.ANSWER，Controller 流式发送
+     */
+    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> chatStream(@RequestBody Map<String, Object> request) {
+        String message = (String) request.get("message");
+        String sessionId = (String) request.get("sessionId");
+        Long scenicId = request.get("scenicId") != null
+                ? ((Number) request.get("scenicId")).longValue() : null;
+
+        log.info("[流式对话] 开始: message={}, sessionId={}, scenicId={}", message, sessionId, scenicId);
+
+        if (message == null || message.isBlank()) {
+            return Flux.just(errorSse("消息内容不能为空"));
+        }
+        if (sessionId == null || sessionId.isBlank()) {
+            return Flux.just(errorSse("sessionId 不能为空"));
+        }
+
+        try {
+            long graphStart = System.currentTimeMillis();
+            OverAllState result = executeGraph(message, sessionId, scenicId);
+            long graphCost = System.currentTimeMillis() - graphStart;
+            log.info("[流式对话] Graph执行耗时: {}ms", graphCost);
+
+            String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
+            String routeStatus = (String) result.value(GraphStateKey.ROUTE_STATUS).orElse(null);
+
+            // pending 场景
+            if ("pending".equals(routeStatus)) {
+                String guideMessage = (String) result.value(GraphStateKey.GUIDE_MESSAGE)
+                        .orElse("请告诉我您的起点和终点");
+                long timestamp = System.currentTimeMillis();
+                return Flux.just(
+                        metadataSse(intent, null, graphCost, timestamp),
+                        answerSse(guideMessage),
+                        doneSse(timestamp)
+                );
+            }
+
+            String answer = (String) result.value(GraphStateKey.ANSWER).orElse("");
+            if (answer == null || answer.isBlank()) {
+                long timestamp = System.currentTimeMillis();
+                return Flux.just(
+                        metadataSse(intent, null, graphCost, timestamp),
+                        answerSse("抱歉，暂时无法生成回复。"),
+                        doneSse(timestamp)
+                );
+            }
+
+            // 路线附件
+            List<?> rawRoutes;
+            if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
+                rawRoutes = result.value(GraphStateKey.POLISHED_ROUTES, List.class).orElse(null);
+            } else {
+                rawRoutes = null;
+            }
+
+            long timestamp = System.currentTimeMillis();
+            return Flux.just(metadataSse(intent, rawRoutes, graphCost, timestamp))
+                    .concatWith(Flux.defer(() -> Flux.just(answerSse(answer))))
+                    .concatWith(Flux.defer(() -> streamAudio(answer, intent, rawRoutes, scenicId, timestamp)))
+                    .concatWith(Flux.just(doneSse(timestamp)))
+                    .doOnError(e -> log.error("[流式对话] 流发送失败", e));
+
+        } catch (Exception e) {
+            log.error("[流式对话] 执行失败", e);
+            return Flux.just(errorSse("处理失败: " + e.getMessage()));
+        }
+    }
+
+    private Flux<ServerSentEvent<String>> streamString(String text) {
+        int chunkSize = 20;
+        return Flux.range(0, (text.length() + chunkSize - 1) / chunkSize)
+                .map(i -> text.substring(i * chunkSize, Math.min((i + 1) * chunkSize, text.length())))
+                .filter(chunk -> !chunk.isEmpty())
+                .map(this::answerSse);
+    }
+
+    private ServerSentEvent<String> answerSse(String content) {
+        String data = "{\"content\":\"" + escapeJson(content) + "\"}";
+        return ServerSentEvent.<String>builder()
+                .id(String.valueOf(System.currentTimeMillis()))
+                .event("answer")
+                .data(data)
+                .build();
+    }
+
+    private Flux<ServerSentEvent<String>> streamAudio(String answer, String intent, List<?> rawRoutes, Long scenicId, long startTimestamp) {
+        // 路线规划时从 JSON 提取文本描述，避免过长 JSON
+        String ttsText = answer;
+        if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent) && rawRoutes != null && !rawRoutes.isEmpty()) {
+            ttsText = buildRouteNarration(rawRoutes);
+        }
+        // 过滤 emoji，避免 CosyVoice 报 418 错误
+        ttsText = ttsText != null ? EmojiUtil.removeAllEmojis(ttsText) : "";
+
+        // 截断超长文本（CosyVoice 单次限制约 500 字）
+        if (ttsText.length() > 500) {
+            ttsText = ttsText.substring(0, 500);
+        }
+
+        DigitalHumanConfig digitalHuman = scenicId != null
+                ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
+
+        AtomicInteger seq = new AtomicInteger(0);
+        final long audioStart = System.currentTimeMillis();
+
+        return ttsService.streamAudio(ttsText, digitalHuman)
+                .map(chunk -> {
+                    int s = seq.incrementAndGet();
+                    String base64 = Base64.getEncoder().encodeToString(chunk);
+                    log.debug("[TTS-流式] 推送第{}个chunk, 大小={}B", s, chunk.length);
+                    return audioSse(s, base64, audioStart);
+                })
+                .doOnComplete(() -> {
+                    long cost = System.currentTimeMillis() - audioStart;
+                    log.info("[TTS-流式] 全部推送完成, 共{}个chunk, 耗时={}ms", seq.get(), cost);
+                })
+                .doOnError(e -> log.error("[TTS-流式] 流失败，切换文件方式: {}", e.getMessage()));
+    }
+
+    private String buildRouteNarration(List<?> rawRoutes) {
+        StringBuilder sb = new StringBuilder("为您推荐以下路线：");
+        for (int i = 0; i < rawRoutes.size(); i++) {
+            Map<String, Object> route = (Map<String, Object>) rawRoutes.get(i);
+            String strategy = String.valueOf(route.getOrDefault("strategy", "路线" + (i + 1)));
+            String desc = String.valueOf(route.getOrDefault("description", ""));
+            sb.append(strategy).append("路线：").append(desc).append("。");
+        }
+        return sb.toString();
+    }
+
+    private ServerSentEvent<String> audioSse(int seq, String base64Chunk, long startTimestamp) {
+        long audioCost = System.currentTimeMillis() - startTimestamp;
+        String data = "{\"seq\":" + seq + ",\"chunk\":\"" + base64Chunk + "\",\"audioCostMs\":" + audioCost + "}";
+        return ServerSentEvent.<String>builder()
+                .id(String.valueOf(System.currentTimeMillis()))
+                .event("audio")
+                .data(data)
+                .build();
+    }
+
+    private ServerSentEvent<String> metadataSse(String intent, List<?> attachments, long graphCost, long timestamp) {
+        String data;
+        if (attachments == null || attachments.isEmpty()) {
+            data = "{\"intent\":\"" + escapeJson(intent) + "\",\"graphCostMs\":" + graphCost + ",\"timestamp\":" + timestamp + "}";
+        } else {
+            String attachmentsJson = buildAttachmentsJson(attachments);
+            data = "{\"intent\":\"" + escapeJson(intent) + "\",\"attachments\":" + attachmentsJson + ",\"graphCostMs\":" + graphCost + ",\"timestamp\":" + timestamp + "}";
+        }
+        return ServerSentEvent.<String>builder()
+                .id(String.valueOf(timestamp))
+                .event("metadata")
+                .data(data)
+                .build();
+    }
+
+    private String buildAttachmentsJson(List<?> rawRoutes) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < rawRoutes.size(); i++) {
+            if (i > 0) sb.append(",");
+            Map<String, Object> route = (Map<String, Object>) rawRoutes.get(i);
+            sb.append("{");
+            sb.append("\"id\":\"").append("route-").append(i).append("\",");
+            sb.append("\"title\":\"").append(escapeJson(
+                    String.valueOf(route.getOrDefault("description", route.getOrDefault("title", "推荐路线"))))).append("\",");
+            sb.append("\"summary\":\"").append(escapeJson(buildRouteSummary(route))).append("\",");
+            sb.append("\"duration\":\"").append(escapeJson(String.valueOf(route.getOrDefault("duration", "")))).append("\"");
+            sb.append("}");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     private String buildRouteSummary(Map<String, Object> route) {
         StringBuilder sb = new StringBuilder();
         if (route.get("suitableFor") != null) {
@@ -206,18 +427,35 @@ public class TouristController extends BaseController {
             if (sb.length() > 0) sb.append(" | ");
             sb.append("提示：").append(route.get("tips"));
         }
-        return sb.length() > 0 ? sb.toString() : "";
+        return sb.toString();
     }
 
-    private List<String> buildRouteTags(Map<String, Object> route) {
-        List<String> tags = new ArrayList<>();
-        if (route.get("suitableFor") != null) {
-            tags.add(route.get("suitableFor").toString());
-        }
-        if (route.get("strategy") != null) {
-            tags.add(route.get("strategy").toString());
-        }
-        return tags;
+    private ServerSentEvent<String> doneSse(long startTimestamp) {
+        long totalCost = System.currentTimeMillis() - startTimestamp;
+        String data = "{\"content\":\"\",\"totalCostMs\":" + totalCost + "}";
+        return ServerSentEvent.<String>builder()
+                .id(String.valueOf(System.currentTimeMillis()))
+                .event("done")
+                .data(data)
+                .build();
+    }
+
+    private ServerSentEvent<String> errorSse(String message) {
+        String data = "{\"content\":\"\",\"error\":\"" + escapeJson(message) + "\",\"timestamp\":" + System.currentTimeMillis() + "}";
+        return ServerSentEvent.<String>builder()
+                .id(String.valueOf(System.currentTimeMillis()))
+                .event("error")
+                .data(data)
+                .build();
+    }
+
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     /**

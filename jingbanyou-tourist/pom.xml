@@ -56,6 +56,17 @@
             <artifactId>spring-ai-alibaba-graph-core</artifactId>
         </dependency>
 
+        <!-- MCP 工具回调支持（starter 自动包含 mcp-annotations 等全部依赖） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-client</artifactId>
+        </dependency>
+        <!-- McpToolCallbackAutoConfiguration 在 common 包中，需单独引入 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-autoconfigure-mcp-client-common</artifactId>
+        </dependency>
+
         <!-- WebSocket（实时交互） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -86,6 +97,20 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Hutool（工具类，emoji 过滤等） -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.25</version>
+        </dependency>
+
+        <!-- emoji-java（EmojiUtil 依赖） -->
+        <dependency>
+            <groupId>com.vdurmont</groupId>
+            <artifactId>emoji-java</artifactId>
+            <version>5.1.1</version>
         </dependency>
 
 
