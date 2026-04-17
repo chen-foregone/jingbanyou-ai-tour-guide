@@ -350,6 +350,7 @@ public class TouristController extends BaseController {
 
         AtomicInteger seq = new AtomicInteger(0);
         final long audioStart = System.currentTimeMillis();
+        log.info("[TTS-流式] 开始合成, audioStart={}", audioStart);
 
         return ttsService.streamAudio(ttsText, digitalHuman)
                 .map(chunk -> {
@@ -378,9 +379,10 @@ public class TouristController extends BaseController {
 
     private ServerSentEvent<String> audioSse(int seq, String base64Chunk, long startTimestamp) {
         long audioCost = System.currentTimeMillis() - startTimestamp;
-        String data = "{\"seq\":" + seq + ",\"chunk\":\"" + base64Chunk + "\",\"audioCostMs\":" + audioCost + "}";
+        long serverTime = System.currentTimeMillis();
+        String data = "{\"seq\":" + seq + ",\"chunk\":\"" + base64Chunk + "\",\"audioCostMs\":" + audioCost + ",\"serverTime\":" + serverTime + "}";
         return ServerSentEvent.<String>builder()
-                .id(String.valueOf(System.currentTimeMillis()))
+                .id(String.valueOf(serverTime))
                 .event("audio")
                 .data(data)
                 .build();
