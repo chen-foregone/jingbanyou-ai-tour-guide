@@ -70,6 +70,7 @@ public class StreamGraphConfiguration {
             strategies.put(GraphStateKey.ROUTE_STATUS, new ReplaceStrategy());
             strategies.put(GraphStateKey.GUIDE_MESSAGE, new ReplaceStrategy());
             strategies.put(GraphStateKey.VISITOR_PROFILE, new ReplaceStrategy());
+            strategies.put(GraphStateKey.ROUTE_CACHE_HIT, new ReplaceStrategy());
             return strategies;
         };
 
@@ -105,10 +106,11 @@ public class StreamGraphConfiguration {
         stateGraph.addConditionalEdges(TEXT_DISTINGUISH, intentRouter(), intentRoutingMap());
         stateGraph.addConditionalEdges(MULTIMODAL_DISTINGUISH, intentRouter(), intentRoutingMap());
 
-        // 路线规划路径
+        // 路线规划路径：缓存命中时跳过 RoutePolish，直接到 ProfileUpdater
         stateGraph.addConditionalEdges(MAP_ROUTE_API_INVOKER, routeStatusRouter(), Map.of(
                 "success", ROUTE_POLISH,
-                "pending", PROFILE_UPDATER
+                "pending", PROFILE_UPDATER,
+                "cache_hit", PROFILE_UPDATER
         ));
         stateGraph.addEdge(ROUTE_POLISH, PROFILE_UPDATER);
 
@@ -144,6 +146,11 @@ public class StreamGraphConfiguration {
         return new AsyncEdgeAction() {
             @Override
             public CompletableFuture<String> apply(OverAllState state) {
+                // 缓存命中时跳过 RoutePolish，直接到 ProfileUpdater
+                Boolean cacheHit = state.value(GraphStateKey.ROUTE_CACHE_HIT, Boolean.class).orElse(false);
+                if (Boolean.TRUE.equals(cacheHit)) {
+                    return CompletableFuture.completedFuture("cache_hit");
+                }
                 String status = state.value(GraphStateKey.ROUTE_STATUS).orElse("success").toString();
                 return CompletableFuture.completedFuture(status);
             }

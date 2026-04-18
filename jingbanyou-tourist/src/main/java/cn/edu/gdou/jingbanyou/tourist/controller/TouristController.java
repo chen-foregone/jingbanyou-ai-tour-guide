@@ -10,6 +10,7 @@ import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.StreamGraphConfiguration;
 import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
+import cn.edu.gdou.jingbanyou.tourist.service.RagPrecheckService;
 import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
 import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
 import cn.hutool.core.bean.BeanUtil;
@@ -53,6 +54,7 @@ public class TouristController extends BaseController {
     private final TranscribeService transcribeService;
     private final ChatMemoryService chatMemoryService;
     private final TtsService ttsService;
+    private final RagPrecheckService ragPrecheckService;
 
     /**
      * 前台首屏初始化
@@ -109,6 +111,23 @@ public class TouristController extends BaseController {
         }
 
         try {
+            // ========== 优化一：RAG 预检短路 ==========
+            long ragStart = System.currentTimeMillis();
+            Optional<String> ragAnswer = ragPrecheckService.fastMatch(message, scenicId);
+            long ragCost = System.currentTimeMillis() - ragStart;
+            if (ragAnswer.isPresent()) {
+                String cachedAnswer = ragAnswer.get();
+                log.info("[RAG-预检] 命中，直接返回，耗时={}ms", ragCost);
+                // 不走 Graph，不调用 TTS，直接返回
+                return success(Map.of(
+                        "reply", Map.of("id", "assistant-" + System.currentTimeMillis(),
+                                "role", "assistant", "content", cachedAnswer),
+                        "intent", "rag_prematch",
+                        "attachments", List.of(),
+                        "ragCostMs", ragCost
+                ));
+            }
+
             long totalStart = System.currentTimeMillis();
             long graphStart = System.currentTimeMillis();
             OverAllState result = executeGraph(message, sessionId, scenicId);
@@ -263,6 +282,21 @@ public class TouristController extends BaseController {
         }
 
         try {
+            // ========== 优化一：RAG 预检短路 ==========
+            long ragStart = System.currentTimeMillis();
+            Optional<String> ragAnswer = ragPrecheckService.fastMatch(message, scenicId);
+            long ragCost = System.currentTimeMillis() - ragStart;
+            if (ragAnswer.isPresent()) {
+                String cachedAnswer = ragAnswer.get();
+                log.info("[RAG-预检] 命中，直接返回，耗时={}ms", ragCost);
+                long timestamp = System.currentTimeMillis();
+                return Flux.just(
+                        metadataSse("rag_prematch", null, ragCost, timestamp),
+                        answerSse(cachedAnswer),
+                        doneSse(timestamp)
+                );
+            }
+
             long graphStart = System.currentTimeMillis();
             OverAllState result = executeGraph(message, sessionId, scenicId);
             long graphCost = System.currentTimeMillis() - graphStart;

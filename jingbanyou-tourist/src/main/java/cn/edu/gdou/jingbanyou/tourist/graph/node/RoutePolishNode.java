@@ -3,10 +3,12 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
+import cn.edu.gdou.jingbanyou.tourist.service.RouteCacheService;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,20 +23,17 @@ import java.util.Map;
  * 任务：结合用户画像，对多条原始路线进行润色、筛选、排序
  * 输入：state.RAW_ROUTES（多条原始路线）, state.VISITOR_PROFILE（用户画像）
  * 输出：state.POLISHED_ROUTES（润色后的路线列表）
+ * <p>
+ * 优化：润色完成后写入 Redis 缓存（按起点+终点），供后续同路线查询命中
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class RoutePolishNode implements NodeAction {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
-
-    public RoutePolishNode(
-            @Qualifier("routePolishChatClient") ChatClient chatClient,
-            ObjectMapper objectMapper) {
-        this.chatClient = chatClient;
-        this.objectMapper = objectMapper;
-    }
+    private final RouteCacheService routeCacheService;
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
@@ -47,6 +46,7 @@ public class RoutePolishNode implements NodeAction {
 
         VisitorProfile profile = state.value(VISITOR_PROFILE, VisitorProfile.class)
                 .orElse(new VisitorProfile());
+        Long scenicId = state.value(SCENIC_ID, Long.class).orElse(null);
 
         String userProfileDesc = buildProfileDescription(profile);
         String rawRoutesJson = objectMapper.writeValueAsString(rawRoutes);
@@ -61,10 +61,24 @@ public class RoutePolishNode implements NodeAction {
         log.info("[路线润色] 输出: {}", polishedJson);
 
         List<Map<String, Object>> polishedRoutes = parsePolishedRoutes(polishedJson);
+
+        // 写入缓存（按起点+终点，不含用户画像个人信息）
+        String startName = extractFirst(rawRoutes, "startName");
+        String endName = extractFirst(rawRoutes, "endName");
+        if (!startName.isBlank() && !endName.isBlank()) {
+            routeCacheService.cacheRoutes(scenicId, startName, endName, polishedRoutes);
+        }
+
         return state.updateState(Map.of(
                 ANSWER, polishedJson != null ? polishedJson : "",
                 POLISHED_ROUTES, polishedRoutes
         ));
+    }
+
+    private String extractFirst(List<Map<String, Object>> routes, String key) {
+        if (routes == null || routes.isEmpty()) return "";
+        Object val = routes.get(0).get(key);
+        return val != null ? val.toString() : "";
     }
 
     private String buildProfileDescription(VisitorProfile profile) {

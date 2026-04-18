@@ -183,6 +183,13 @@ public final class GraphStateKey {
      */
     public static final String ROUTE_STATUS = "routeStatus";
 
+    /**
+     * 路线缓存命中标识（用于跳过 RoutePolish 节点）
+     * 类型：Boolean
+     * 来源：MapRouteApiInvokerNode（命中缓存时写入 true）
+     */
+    public static final String ROUTE_CACHE_HIT = "routeCacheHit";
+
     // 私有构造函数，防止实例化
     private GraphStateKey() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
