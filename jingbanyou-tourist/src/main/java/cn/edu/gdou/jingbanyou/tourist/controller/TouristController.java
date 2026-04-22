@@ -10,7 +10,7 @@ import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.StreamGraphConfiguration;
 import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
-import cn.edu.gdou.jingbanyou.tourist.service.RagPrecheckService;
+import cn.edu.gdou.jingbanyou.tourist.service.IRagPrecheckService;
 import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
 import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
 import cn.hutool.core.bean.BeanUtil;
@@ -54,7 +54,7 @@ public class TouristController extends BaseController {
     private final TranscribeService transcribeService;
     private final ChatMemoryService chatMemoryService;
     private final TtsService ttsService;
-    private final RagPrecheckService ragPrecheckService;
+    private final IRagPrecheckService ragPrecheckService;
 
     /**
      * 前台首屏初始化

@@ -100,4 +100,39 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
                 .orderByDesc(Faq::getClickCount));
         return result.getRecords();
     }
+
+    @Override
+    public FaqMatchResult matchWithScore(Long scenicId, String question, double threshold) {
+        SearchRequest request = SearchRequest.builder()
+                .query(question)
+                .topK(1)
+                .similarityThreshold(threshold)
+                .filterExpression("scenicId == '" + scenicId + "'")
+                .build();
+
+        List<Document> results = redisVectorStore.similaritySearch(request);
+        if (results == null || results.isEmpty()) {
+            return new FaqMatchResult(null, null);
+        }
+
+        Document doc = results.get(0);
+        Double score = doc.getScore();
+
+        // 显式校验分数，避免 VectorStore 实现差异导致阈值失效
+        if (score == null || score < threshold) {
+            return new FaqMatchResult(null, null);
+        }
+
+        String faqIdStr = (String) doc.getMetadata().get("faqId");
+        if (faqIdStr == null) {
+            return new FaqMatchResult(null, null);
+        }
+
+        Faq faq = getById(Long.parseLong(faqIdStr));
+        if (faq == null) {
+            return new FaqMatchResult(null, null);
+        }
+
+        return new FaqMatchResult(faq, score);
+    }
 }

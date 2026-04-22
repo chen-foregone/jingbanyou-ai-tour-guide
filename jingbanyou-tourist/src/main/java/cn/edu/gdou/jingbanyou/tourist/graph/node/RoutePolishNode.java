@@ -3,7 +3,7 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
-import cn.edu.gdou.jingbanyou.tourist.service.RouteCacheService;
+import cn.edu.gdou.jingbanyou.tourist.service.IRouteCacheService;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -33,7 +33,7 @@ public class RoutePolishNode implements NodeAction {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
-    private final RouteCacheService routeCacheService;
+    private final IRouteCacheService routeCacheService;
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {

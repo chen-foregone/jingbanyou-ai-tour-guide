@@ -57,4 +57,27 @@ public interface IFaqService extends IService<Faq>
      * @return FAQ列表
      */
     public List<Faq> getHotQuestions(Long scenicId, Integer limit);
+
+    /**
+     * 带分数的 FAQ 匹配（用于 RAG 预检）
+     *
+     * @param scenicId 景区ID
+     * @param question 用户问题
+     * @param threshold 相似度阈值（0~1）
+     * @return 匹配结果，score 为 null 表示未命中
+     */
+    public FaqMatchResult matchWithScore(Long scenicId, String question, double threshold);
+
+    /**
+     * FAQ 匹配结果（含分数）
+     */
+    @lombok.Data
+    public static class FaqMatchResult {
+        private final Faq faq;
+        private final Double score;
+
+        public boolean isMatched() {
+            return faq != null && score != null;
+        }
+    }
 }

@@ -6,7 +6,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import cn.edu.gdou.jingbanyou.tourist.service.RouteCacheService;
+import cn.edu.gdou.jingbanyou.tourist.service.IRouteCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
@@ -37,12 +37,12 @@ public class MapRouteApiInvokerNode implements NodeAction {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
-    private final RouteCacheService routeCacheService;
+    private final IRouteCacheService routeCacheService;
 
     public MapRouteApiInvokerNode(
             @Qualifier("mapRouteInvokerChatClient") ChatClient chatClient,
             ObjectMapper objectMapper,
-            RouteCacheService routeCacheService) {
+            IRouteCacheService routeCacheService) {
         this.chatClient = chatClient;
         this.objectMapper = objectMapper;
         this.routeCacheService = routeCacheService;
