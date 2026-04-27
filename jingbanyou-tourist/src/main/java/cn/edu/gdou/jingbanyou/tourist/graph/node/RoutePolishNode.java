@@ -8,7 +8,6 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,20 +19,32 @@ import java.util.Map;
 
 /**
  * 路线润色节点（阶段二）
+ *
  * 任务：结合用户画像，对多条原始路线进行润色、筛选、排序
  * 输入：state.RAW_ROUTES（多条原始路线）, state.VISITOR_PROFILE（用户画像）
  * 输出：state.POLISHED_ROUTES（润色后的路线列表）
- * <p>
+ *
  * 优化：润色完成后写入 Redis 缓存（按起点+终点），供后续同路线查询命中
+ *
+ * @author jingbanyou
+ * @author jingbanyou
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class RoutePolishNode implements NodeAction {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
     private final IRouteCacheService routeCacheService;
+
+    public RoutePolishNode(
+            @Qualifier("routePolishChatClient") ChatClient chatClient,
+            ObjectMapper objectMapper,
+            IRouteCacheService routeCacheService) {
+        this.chatClient = chatClient;
+        this.objectMapper = objectMapper;
+        this.routeCacheService = routeCacheService;
+    }
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
@@ -75,12 +86,25 @@ public class RoutePolishNode implements NodeAction {
         ));
     }
 
+    /**
+     * 从路线列表中提取指定 key 的值（取第一条）
+     *
+     * @param routes 路线列表
+     * @param key 字段名
+     * @return 字段值
+     */
     private String extractFirst(List<Map<String, Object>> routes, String key) {
         if (routes == null || routes.isEmpty()) return "";
         Object val = routes.get(0).get(key);
         return val != null ? val.toString() : "";
     }
 
+    /**
+     * 构建用户画像描述文本（供路线润色 prompt 使用）
+     *
+     * @param profile 游客画像
+     * @return 画像描述文本
+     */
     private String buildProfileDescription(VisitorProfile profile) {
         StringBuilder sb = new StringBuilder();
         sb.append("游客ID: ").append(profile.getVisitorId()).append("\n");
@@ -111,6 +135,12 @@ public class RoutePolishNode implements NodeAction {
         return sb.toString();
     }
 
+    /**
+     * 解析润色后的路线 JSON
+     *
+     * @param json 原始 JSON 字符串
+     * @return 路线列表
+     */
     private List<Map<String, Object>> parsePolishedRoutes(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
@@ -124,6 +154,12 @@ public class RoutePolishNode implements NodeAction {
         }
     }
 
+    /**
+     * 清理 JSON 字符串中的 markdown 代码块标记
+     *
+     * @param json 原始字符串
+     * @return 清理后的字符串
+     */
     private String cleanJson(String json) {
         if (json == null) return "[]";
         String cleaned = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");

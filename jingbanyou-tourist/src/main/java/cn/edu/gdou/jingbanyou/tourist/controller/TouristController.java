@@ -9,15 +9,18 @@ import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.StreamGraphConfiguration;
-import cn.edu.gdou.jingbanyou.tourist.service.ChatMemoryService;
+import cn.edu.gdou.jingbanyou.tourist.service.IChatMemoryService;
 import cn.edu.gdou.jingbanyou.tourist.service.IRagPrecheckService;
-import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
-import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
+import cn.edu.gdou.jingbanyou.tourist.service.ITtsService;
+import cn.edu.gdou.jingbanyou.tourist.service.ITranscribeService;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +37,7 @@ import cn.hutool.extra.emoji.EmojiUtil;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import java.util.concurrent.TimeUnit;
 import java.util.Base64;
 
 /**
@@ -51,10 +55,12 @@ public class TouristController extends BaseController {
     private final IScenicAreaService scenicAreaService;
     private final IDigitalHumanConfigService digitalHumanConfigService;
     private final StreamGraphConfiguration streamGraphConfiguration;
-    private final TranscribeService transcribeService;
-    private final ChatMemoryService chatMemoryService;
-    private final TtsService ttsService;
+    private final ITranscribeService transcribeService;
+    private final IChatMemoryService chatMemoryService;
+    private final ITtsService ttsService;
     private final IRagPrecheckService ragPrecheckService;
+    private final RedisTemplate<String, Object> chatMetadataRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     /**
      * 前台首屏初始化
@@ -118,6 +124,8 @@ public class TouristController extends BaseController {
             if (ragAnswer.isPresent()) {
                 String cachedAnswer = ragAnswer.get();
                 log.info("[RAG-预检] 命中，直接返回，耗时={}ms", ragCost);
+                // 保存元数据到 Redis（RAG 命中不走 Graph）
+                saveChatMetadata(sessionId, "rag_prematch", null, null, (int) ragCost);
                 // 不走 Graph，不调用 TTS，直接返回
                 return success(Map.of(
                         "reply", Map.of("id", "assistant-" + System.currentTimeMillis(),
@@ -130,7 +138,8 @@ public class TouristController extends BaseController {
 
             long totalStart = System.currentTimeMillis();
             long graphStart = System.currentTimeMillis();
-            OverAllState result = executeGraph(message, sessionId, scenicId);
+            String visitorId = (String) request.get("visitorId");
+            OverAllState result = executeGraph(message, sessionId, scenicId, visitorId);
             long graphCost = System.currentTimeMillis() - graphStart;
             log.info("[Chat] Graph执行耗时: {}ms", graphCost);
 
@@ -142,6 +151,8 @@ public class TouristController extends BaseController {
             if ("pending".equals(routeStatus)) {
                 String guideMessage = (String) result.value(GraphStateKey.GUIDE_MESSAGE)
                         .orElse("请告诉我您的起点和终点");
+                // 保存元数据到 Redis
+                saveChatMetadata(sessionId, intent, null, null, (int) graphCost);
                 return success(Map.of(
                         "reply", Map.of("id", "assistant-" + System.currentTimeMillis(),
                                 "role", "assistant", "content", guideMessage),
@@ -186,6 +197,11 @@ public class TouristController extends BaseController {
             } else {
                 reply.put("attachments", List.of());
             }
+
+            // 保存对话元数据到 Redis
+            Integer tokensUsed = (Integer) result.value(GraphStateKey.TOKENS_USED).orElse(null);
+            String modelUsed = (String) result.value(GraphStateKey.MODEL_USED).orElse(null);
+            saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
 
             return success(Map.of(
                     "reply", reply,
@@ -246,8 +262,14 @@ public class TouristController extends BaseController {
 
     /**
      * 执行 Graph 并返回结果
+     *
+     * @param message   用户消息
+     * @param sessionId 会话ID
+     * @param scenicId  景区ID
+     * @param visitorId 游客ID
+     * @return Graph 执行结果
      */
-    private OverAllState executeGraph(String message, String sessionId, Long scenicId) throws Exception {
+    private OverAllState executeGraph(String message, String sessionId, Long scenicId, String visitorId) throws Exception {
         Map<String, Object> initialState = new HashMap<>();
         initialState.put(GraphStateKey.SESSION_ID, sessionId);
         initialState.put(GraphStateKey.QUESTION, message);
@@ -255,6 +277,9 @@ public class TouristController extends BaseController {
         initialState.put(GraphStateKey.LANGUAGE, "zh");
         if (scenicId != null) {
             initialState.put(GraphStateKey.SCENIC_ID, scenicId);
+        }
+        if (visitorId != null && !visitorId.isBlank()) {
+            initialState.put(GraphStateKey.VISITOR_ID, visitorId);
         }
         CompiledGraph graph = streamGraphConfiguration.streamCompiledGraph();
         return graph.invoke(initialState)
@@ -289,6 +314,8 @@ public class TouristController extends BaseController {
             if (ragAnswer.isPresent()) {
                 String cachedAnswer = ragAnswer.get();
                 log.info("[RAG-预检] 命中，直接返回，耗时={}ms", ragCost);
+                // 保存元数据到 Redis
+                saveChatMetadata(sessionId, "rag_prematch", null, null, (int) ragCost);
                 long timestamp = System.currentTimeMillis();
                 return Flux.just(
                         metadataSse("rag_prematch", null, ragCost, timestamp),
@@ -298,11 +325,16 @@ public class TouristController extends BaseController {
             }
 
             long graphStart = System.currentTimeMillis();
-            OverAllState result = executeGraph(message, sessionId, scenicId);
+            String visitorId = (String) request.get("visitorId");
+            OverAllState result = executeGraph(message, sessionId, scenicId, visitorId);
             long graphCost = System.currentTimeMillis() - graphStart;
             log.info("[流式对话] Graph执行耗时: {}ms", graphCost);
 
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
+            Integer tokensUsed = (Integer) result.value(GraphStateKey.TOKENS_USED).orElse(null);
+            String modelUsed = (String) result.value(GraphStateKey.MODEL_USED).orElse(null);
+            // 保存对话元数据到 Redis
+            saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
             String routeStatus = (String) result.value(GraphStateKey.ROUTE_STATUS).orElse(null);
 
             // pending 场景
@@ -525,6 +557,7 @@ public class TouristController extends BaseController {
 
     /**
      * 会话结束，持久化对话历史
+     *
      * @param request 包含 sessionId、scenicId、visitorId
      * @return 保存结果
      */
@@ -533,6 +566,7 @@ public class TouristController extends BaseController {
         String sessionId = (String) request.get("sessionId");
         Object scenicIdObj = request.get("scenicId");
         String visitorId = (String) request.get("visitorId");
+        String interactionType = (String) request.getOrDefault("interactionType", "text");
 
         if (sessionId == null || sessionId.isBlank()) {
             return error("sessionId 不能为空");
@@ -545,8 +579,65 @@ public class TouristController extends BaseController {
                     : Long.parseLong(scenicIdObj.toString());
         }
 
-        chatMemoryService.syncToMySQL(sessionId, scenicId, visitorId);
+        // 从 Redis 取对话元数据
+        Map<String, Object> meta = getChatMetadata(sessionId);
+        String intentType = meta != null ? (String) meta.get("intent") : null;
+        Integer responseTimeMs = meta != null ? (Integer) meta.get("responseTimeMs") : null;
+        Integer tokensUsed = meta != null ? (Integer) meta.get("tokensUsed") : null;
+        String modelUsed = meta != null ? (String) meta.get("modelUsed") : null;
+
+        chatMemoryService.syncToMySQL(sessionId, scenicId, visitorId,
+                interactionType, intentType, responseTimeMs, tokensUsed, modelUsed);
+
+        // 清除元数据 key
+        deleteChatMetadata(sessionId);
+
         return success("会话已保存");
+    }
+
+    /**
+     * 将对话元数据存入 Redis，TTL 1 小时
+     */
+    private void saveChatMetadata(String sessionId, String intent, Integer tokensUsed,
+                                  String modelUsed, int responseTimeMs) {
+        try {
+            Map<String, Object> meta = new HashMap<>();
+            meta.put("intent", intent);
+            meta.put("tokensUsed", tokensUsed);
+            meta.put("modelUsed", modelUsed);
+            meta.put("responseTimeMs", responseTimeMs);
+            String json = objectMapper.writeValueAsString(meta);
+            chatMetadataRedisTemplate.opsForValue().set("chat:meta:" + sessionId, json, 1, TimeUnit.HOURS);
+        } catch (JsonProcessingException e) {
+            log.warn("保存对话元数据失败 sessionId={}", sessionId, e);
+        }
+    }
+
+    /**
+     * 从 Redis 获取对话元数据
+     */
+    private Map<String, Object> getChatMetadata(String sessionId) {
+        try {
+            Object raw = chatMetadataRedisTemplate.opsForValue().get("chat:meta:" + sessionId);
+            if (raw == null) return null;
+            if (raw instanceof String) {
+                return objectMapper.readValue((String) raw, Map.class);
+            }
+        } catch (Exception e) {
+            log.warn("获取对话元数据失败 sessionId={}", sessionId, e);
+        }
+        return null;
+    }
+
+    /**
+     * 从 Redis 删除对话元数据
+     */
+    private void deleteChatMetadata(String sessionId) {
+        try {
+            chatMetadataRedisTemplate.delete("chat:meta:" + sessionId);
+        } catch (Exception e) {
+            log.warn("删除对话元数据失败 sessionId={}", sessionId, e);
+        }
     }
 
     /**
@@ -591,7 +682,7 @@ public class TouristController extends BaseController {
      */
     @GetMapping("/tts/{filename}")
     public ResponseEntity<byte[]> ttsAudio(@PathVariable String filename) throws IOException {
-        Path audioPath = Paths.get("/tmp/tts", filename);
+        Path audioPath = Paths.get(System.getProperty("java.io.tmpdir"), "tts", filename);
         if (!Files.exists(audioPath)) {
             return ResponseEntity.notFound().build();
         }

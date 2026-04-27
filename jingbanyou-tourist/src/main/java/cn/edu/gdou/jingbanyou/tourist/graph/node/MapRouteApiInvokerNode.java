@@ -20,16 +20,20 @@ import java.util.Map;
 
 /**
  * 路线收集节点
+ *
  * 职责：
  * 1. 检测用户问题中起点/终点是否完整
  * 2. 缺参 → 返回引导语（GUIDE_MESSAGE），中断路线规划
  * 3. 参齐全 → 调用高德地图 MCP，返回多条路线（RAW_ROUTES）
- * <p>
+ *
  * 优化：调用地图 API 前先查 Redis 缓存，命中则跳过 LLM 调用
- * <p>
+ *
  * 协议：prompt 要求模型遵守输出格式约定：
  * - 参齐全：直接输出路线 JSON 数组 [...]
  * - 缺参：以纯文本回复（不含 JSON 结构），用于引导用户补充信息
+ *
+ * @author jingbanyou
+ * @author jingbanyou
  */
 @Slf4j
 @Component
@@ -100,6 +104,12 @@ public class MapRouteApiInvokerNode implements NodeAction {
         }
     }
 
+    /**
+     * 解析路线 JSON 字符串
+     *
+     * @param json 原始 JSON 字符串
+     * @return 路线列表
+     */
     private List<Map<String, Object>> parseRoutes(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
@@ -113,12 +123,25 @@ public class MapRouteApiInvokerNode implements NodeAction {
         }
     }
 
+    /**
+     * 清理 JSON 字符串中的 markdown 代码块标记
+     *
+     * @param json 原始字符串
+     * @return 清理后的字符串
+     */
     private String cleanJson(String json) {
         if (json == null) return "[]";
         String cleaned = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "");
         return cleaned.trim();
     }
 
+    /**
+     * 从路线列表中提取指定 key 的字符串值（取第一条）
+     *
+     * @param routes 路线列表
+     * @param key 字段名
+     * @return 字段值
+     */
     private String extractFirstString(List<Map<String, Object>> routes, String key) {
         if (routes == null || routes.isEmpty()) return "";
         Object val = routes.get(0).get(key);

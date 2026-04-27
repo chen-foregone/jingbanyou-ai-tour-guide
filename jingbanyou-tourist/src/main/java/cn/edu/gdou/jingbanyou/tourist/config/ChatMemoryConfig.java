@@ -7,6 +7,11 @@ import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * 对话记忆配置（基于 Spring AI Alibaba JedisRedisChatMemoryRepository + Redis Stack）
@@ -57,5 +62,27 @@ public class ChatMemoryConfig {
     @Bean
     public MessageChatMemoryAdvisor chatMemoryAdvisor(ChatMemory chatMemory) {
         return MessageChatMemoryAdvisor.builder(chatMemory).build();
+    }
+
+    /**
+     * RedisTemplate：供 TouristController 存储对话元数据（intent/responseTimeMs 等）
+     * 连接 Redis Stack（6379），与 ChatMemoryRepository 同一实例
+     */
+    @Bean
+    public RedisTemplate<String, Object> chatMetadataRedisTemplate() {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(redisHost);
+        config.setPort(redisPort);
+        JedisConnectionFactory factory = new JedisConnectionFactory(config);
+        factory.afterPropertiesSet();
+
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new StringRedisSerializer());
+        template.afterPropertiesSet();
+        return template;
     }
 }

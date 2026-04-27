@@ -15,6 +15,8 @@ import java.util.Optional;
  * 在调用 AI 之前，先查询 FAQ 向量库：
  * - 相似度 >= 阈值 → 直接返回 FAQ 答案，跳过 AI 调用
  * - 相似度 < 阈值 → 返回空 Optional，继续后续 AI 流程
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Service

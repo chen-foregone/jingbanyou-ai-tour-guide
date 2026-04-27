@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 画像更新节点
+ *
  * 位置：[各业务节点] → ProfileUpdaterNode → END
  * 逻辑：
  *   1. 读取本轮 question + answer，调用轻量模型提取兴趣标签
@@ -28,6 +29,9 @@ import java.util.concurrent.TimeUnit;
  *   3. 累加已访问景点（最多 20 个）
  *   4. turnCount++
  *   5. 写回 OverAllState，异步写 Redis（TTL 24h）
+ *
+ * @author jingbanyou
+ * @author jingbanyou
  */
 @Slf4j
 @Component

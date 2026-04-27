@@ -14,9 +14,13 @@ import java.util.Map;
 
 /**
  * 闲聊兜底节点（非景区问题 / 投诉处理）
+ *
  * 任务：处理游客的闲聊、投诉、天气等非景区问题，要求语气友好、响应快
  *
- * <p>对话历史由 ChatMemoryAdvisor 管理（Redis 热缓存）
+ * 对话历史由 ChatMemoryAdvisor 管理（Redis 热缓存）
+ *
+ * @author jingbanyou
+ * @author jingbanyou
  */
 @Slf4j
 @Component

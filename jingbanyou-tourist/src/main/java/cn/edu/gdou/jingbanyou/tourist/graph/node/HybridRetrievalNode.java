@@ -18,11 +18,15 @@ import java.util.Map;
 
 /**
  * 混合检索节点
+ *
  * 任务：FAQ 和景区知识库并行检索，一次 LLM 生成答案
  * 流程：
  *   1. 查询 FAQ 向量库
  *   2. 查询景区知识向量库
  *   3. 合并结果，一次 LLM 调用生成最终答案
+ *
+ * @author jingbanyou
+ * @author jingbanyou
  */
 @Slf4j
 @Component

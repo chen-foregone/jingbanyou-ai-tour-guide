@@ -12,14 +12,17 @@ import java.util.*;
 
 /**
  * 用户画像向量存储服务
+ *
  * 职责：
  * 1. 将游客偏好存入向量库（用于语义检索）
  * 2. 从向量库检索相似历史偏好
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProfileVectorStoreService {
+public class ProfileVectorStoreService implements IProfileVectorStoreService {
 
     private final VectorStore profileVectorStore;
 
@@ -114,6 +117,9 @@ public class ProfileVectorStoreService {
 
     /**
      * 构建画像文本描述（用于向量化）
+     *
+     * @param profile 游客画像
+     * @return 文本描述
      */
     private String buildProfileText(VisitorProfile profile) {
         StringBuilder sb = new StringBuilder();
@@ -140,6 +146,9 @@ public class ProfileVectorStoreService {
 
     /**
      * 构建元数据
+     *
+     * @param profile 游客画像
+     * @return 元数据 Map
      */
     private Map<String, Object> buildMetadata(VisitorProfile profile) {
         Map<String, Object> metadata = new HashMap<>();

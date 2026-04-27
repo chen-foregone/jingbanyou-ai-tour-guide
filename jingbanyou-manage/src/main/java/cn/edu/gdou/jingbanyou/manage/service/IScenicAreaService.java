@@ -9,6 +9,8 @@ import java.util.List;
 
 /**
  * 景区基础信息 Service 接口
+ *
+ * @author jingbanyou
  */
 public interface IScenicAreaService extends IService<ScenicArea> {
 
@@ -21,4 +23,12 @@ public interface IScenicAreaService extends IService<ScenicArea> {
      * @return 导入结果描述（成功数/跳过数）
      */
     String importFromExcel(MultipartFile file, Long creator);
+
+    /**
+     * 删除景区及其关联数据（FAQ向量、知识库向量）
+     *
+     * @param id 景区ID
+     * @return 是否删除成功
+     */
+    boolean removeWithVectors(Long id);
 }

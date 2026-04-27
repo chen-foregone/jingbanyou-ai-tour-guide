@@ -43,6 +43,11 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
     @Value("${spring.ai.dashscope.embedding.options.model:text-embedding-v2}")
     private String embeddingModel;
 
+    /**
+     * 文档向量化（文本切分 + chunk管理）
+     *
+     * @param docId 文档ID
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void vectorizeDoc(Long docId) {
@@ -111,6 +116,11 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         log.info("文档向量化完成: id={}, chunks={}", docId, splitDocs.size());
     }
 
+    /**
+     * 删除文档（同步清理 Redis 向量 + MySQL chunk 记录）
+     *
+     * @param docId 文档ID
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void removeDocWithVector(Long docId) {
@@ -132,6 +142,8 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
 
     /**
      * 清理指定文档的 chunk 记录和 Redis 向量（向量化和删除时共用）
+     *
+     * @param docId 文档ID
      */
     private void deleteChunksAndVectors(Long docId) {
         // 查出旧 vectorId 列表
@@ -153,6 +165,11 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         }
     }
 
+    /**
+     * 批量向量化（只处理 vectorized=0 的文档）
+     *
+     * @return 成功向量化的数量
+     */
     @Override
     public int batchVectorize() {
         List<KnowledgeDoc> pending = list(new LambdaQueryWrapper<KnowledgeDoc>()
@@ -171,6 +188,12 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         return count;
     }
 
+    /**
+     * 按景区 ID 批量向量化（只处理指定景区下 vectorized=0 的文档）
+     *
+     * @param scenicId 景区ID
+     * @return 成功向量化的数量
+     */
     @Override
     public int batchVectorizeByScenic(Long scenicId) {
         List<KnowledgeDoc> pending = list(new LambdaQueryWrapper<KnowledgeDoc>()

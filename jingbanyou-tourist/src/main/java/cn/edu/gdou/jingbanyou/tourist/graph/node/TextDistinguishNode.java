@@ -16,8 +16,11 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 /**
  * 意图分类器 — 纯文本路径
- * <p>system prompt 由 textDistinguishChatClient 的 defaultSystem 注入（来自 distinguish.yml）
- * <p>历史由 ChatMemoryAdvisor 自动注入
+ *
+ * system prompt 由 textDistinguishChatClient 的 defaultSystem 注入（来自 distinguish.yml）
+ * 历史由 ChatMemoryAdvisor 自动注入
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Component

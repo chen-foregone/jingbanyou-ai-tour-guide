@@ -18,8 +18,11 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 /**
  * 意图分类器 — 多模态路径（音频 + 文字）
- * <p>ChatClient defaultSystem 已配置 multimodalPrompt（来自 distinguish.yml）
- * <p>历史由 Advisor 通过 system prompt 自动注入
+ *
+ * ChatClient defaultSystem 已配置 multimodalPrompt（来自 distinguish.yml）
+ * 历史由 Advisor 通过 system prompt 自动注入
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Component
@@ -61,7 +64,13 @@ public class MultimodalDistinguishNode implements NodeAction {
 
     /**
      * 发送音频到多模态模型
+     *
      * defaultSystem = multimodalPrompt（描述任务），user = 音频 + 简短引导
+     *
+     * @param audioData 音频字节数据
+     * @param question 文本问题
+     * @param sessionId 会话ID
+     * @return 模型输出内容
      */
     protected String invokeWithAudio(byte[] audioData, String question, String sessionId) {
         String userText = "请分析以下音频内容，提取意图和问题，按 JSON 格式输出。";

@@ -26,15 +26,21 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqService
-{
+public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqService {
+
     @Autowired
     @Qualifier("faqVectorStore")
     private VectorStore redisVectorStore;
 
+    /**
+     * 智能匹配相似问题（Redis 向量检索）
+     *
+     * @param scenicId 景区ID
+     * @param question 用户问题
+     * @return 匹配到的 FAQ，未命中返回 null
+     */
     @Override
-    public Faq matchSimilarQuestion(Long scenicId, String question)
-    {
+    public Faq matchSimilarQuestion(Long scenicId, String question) {
         SearchRequest request = SearchRequest.builder()
                 .query(question)
                 .topK(1)
@@ -57,9 +63,13 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
         return getById(Long.parseLong(faqIdStr));
     }
 
+    /**
+     * 向量化 FAQ 并存入 Redis Vector Store
+     *
+     * @param faq FAQ 对象（需已持久化，id 不为空）
+     */
     @Override
-    public void vectorizeFaq(Faq faq)
-    {
+    public void vectorizeFaq(Faq faq) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("faqId", String.valueOf(faq.getId()));
         metadata.put("scenicId", String.valueOf(faq.getScenicId()));
@@ -72,27 +82,45 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
         log.info("FAQ [{}] 向量化完成，vectorId={}", faq.getId(), doc.getId());
     }
 
+    /**
+     * FAQ 被咨询次数 +1
+     *
+     * @param id FAQ ID
+     */
     @Override
-    public void incrementClickCount(Long id)
-    {
+    public void incrementClickCount(Long id) {
         baseMapper.incrementClickCount(id);
     }
 
+    /**
+     * FAQ 点赞数 +1
+     *
+     * @param id FAQ ID
+     */
     @Override
-    public void incrementHelpfulCount(Long id)
-    {
+    public void incrementHelpfulCount(Long id) {
         baseMapper.incrementHelpfulCount(id);
     }
 
+    /**
+     * FAQ 踩数 +1
+     *
+     * @param id FAQ ID
+     */
     @Override
-    public void incrementUnhelpfulCount(Long id)
-    {
+    public void incrementUnhelpfulCount(Long id) {
         baseMapper.incrementUnhelpfulCount(id);
     }
 
+    /**
+     * 获取热门问答 TOP N
+     *
+     * @param scenicId 景区ID
+     * @param limit 条数
+     * @return FAQ列表
+     */
     @Override
-    public List<Faq> getHotQuestions(Long scenicId, Integer limit)
-    {
+    public List<Faq> getHotQuestions(Long scenicId, Integer limit) {
         Page<Faq> page = new Page<>(1, limit != null ? limit : 10);
         Page<Faq> result = page(page, new LambdaQueryWrapper<Faq>()
                 .eq(Faq::getScenicId, scenicId)
@@ -101,6 +129,14 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
         return result.getRecords();
     }
 
+    /**
+     * 带分数的 FAQ 匹配（用于 RAG 预检）
+     *
+     * @param scenicId 景区ID
+     * @param question 用户问题
+     * @param threshold 相似度阈值（0~1）
+     * @return 匹配结果，score 为 null 表示未命中
+     */
     @Override
     public FaqMatchResult matchWithScore(Long scenicId, String question, double threshold) {
         SearchRequest request = SearchRequest.builder()

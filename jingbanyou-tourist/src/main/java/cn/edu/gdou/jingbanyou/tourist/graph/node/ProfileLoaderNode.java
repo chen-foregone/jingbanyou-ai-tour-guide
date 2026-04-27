@@ -3,7 +3,7 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
-import cn.edu.gdou.jingbanyou.tourist.service.ProfileVectorStoreService;
+import cn.edu.gdou.jingbanyou.tourist.service.IProfileVectorStoreService;
 import cn.edu.gdou.jingbanyou.tourist.service.ProfileVectorStoreService.SimilarProfile;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
@@ -18,12 +18,15 @@ import java.util.stream.Collectors;
 
 /**
  * 画像加载节点
+ *
  * 位置：START → ProfileLoaderNode → (条件路由) → TextDistinguishNode / MultimodalDistinguishNode
  * 逻辑：
  *   1. 从 Redis 读取历史画像，无则初始化空画像
  *   2. 从向量库检索相似历史偏好（如用户说"上次那个有花的地方"）
  *   3. 合并检索结果到画像，写入 OverAllState
  * 不调用 LLM，纯 IO 操作
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Component
@@ -34,7 +37,7 @@ public class ProfileLoaderNode implements NodeAction {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
-    private final ProfileVectorStoreService profileVectorStoreService;
+    private final IProfileVectorStoreService profileVectorStoreService;
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
@@ -61,6 +64,11 @@ public class ProfileLoaderNode implements NodeAction {
         return state.updateState(Map.of(VISITOR_PROFILE, profile));
     }
 
+    /**
+     * 从向量库检索并合并相似偏好（评分 > 0.7 的记录）
+     *
+     * @param profile 当前游客画像
+     */
     private void enrichFromVectorStore(VisitorProfile profile) {
         if (profile.getVisitorId() == null || profile.getVisitorId().isBlank()) {
             return;
@@ -93,6 +101,12 @@ public class ProfileLoaderNode implements NodeAction {
         }
     }
 
+    /**
+     * 构建向量检索查询语句
+     *
+     * @param profile 当前游客画像
+     * @return 查询字符串
+     */
     private String buildRetrievalQuery(VisitorProfile profile) {
         StringBuilder query = new StringBuilder();
 
@@ -107,6 +121,12 @@ public class ProfileLoaderNode implements NodeAction {
         return query.toString().trim();
     }
 
+    /**
+     * 将相似偏好合并到当前画像
+     *
+     * @param profile 当前游客画像
+     * @param sp 相似偏好记录
+     */
     private void mergeSimilarProfile(VisitorProfile profile, SimilarProfile sp) {
         Map<String, Object> metadata = sp.getMetadata();
         if (metadata == null) {

@@ -13,12 +13,15 @@ import java.util.List;
 
 /**
  * 对话记忆服务
- * <p>仅负责对话结束时的 MySQL 持久化（Redis 读写已由 MessageChatMemoryAdvisor 自动处理）
+ *
+ * 仅负责对话结束时的 MySQL 持久化（Redis 读写已由 MessageChatMemoryAdvisor 自动处理）
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ChatMemoryService {
+public class ChatMemoryService implements IChatMemoryService {
 
     private final JedisRedisChatMemoryRepository chatMemoryRepository;
     private final VisitorInteractionMapper visitorInteractionMapper;
@@ -26,15 +29,31 @@ public class ChatMemoryService {
     /**
      * 对话结束时，异步全量同步到 MySQL
      * 调用时机：前端页面离开时调用 /tourist/chat/end
+     *
+     * @param sessionId        会话ID
+     * @param scenicId         景区ID
+     * @param visitorId        游客ID
+     * @param interactionType   交互类型（如 text、voice）
      */
+    @Override
     @Async
-    public void syncToMySQL(String sessionId, Long scenicId, String visitorId) {
+    public void syncToMySQL(String sessionId, Long scenicId, String visitorId, String interactionType) {
+        syncToMySQL(sessionId, scenicId, visitorId, interactionType, null, null, null, null);
+    }
+
+    /**
+     * 对话结束时，同步到 MySQL 并携带完整元数据
+     * 调用时机：前端页面离开时调用 /tourist/chat/end
+     */
+    @Override
+    @Async
+    public void syncToMySQL(String sessionId, Long scenicId, String visitorId,
+                           String interactionType, String intentType,
+                           Integer responseTimeMs, Integer tokensUsed, String modelUsed) {
         try {
-            // 从 Redis 读取全部历史消息（lastN=-1 表示全部）
             List<Message> msgs = chatMemoryRepository.findByConversationId(sessionId);
             if (msgs == null || msgs.isEmpty()) return;
 
-            // 每 user+assistant 配对 → 一条 VisitorInteraction
             for (int i = 0; i + 1 < msgs.size(); i += 2) {
                 if (msgs.get(i).getText() != null) {
                     VisitorInteraction record = new VisitorInteraction();
@@ -43,11 +62,14 @@ public class ChatMemoryService {
                     record.setVisitorId(visitorId);
                     record.setUserQuestion(msgs.get(i).getText());
                     record.setAiAnswer(msgs.get(i + 1).getText());
-                    record.setInteractionType("text");
+                    record.setInteractionType(interactionType);
+                    record.setIntentType(intentType);
+                    record.setResponseTimeMs(responseTimeMs);
+                    record.setTokensUsed(tokensUsed);
+                    record.setModelUsed(modelUsed);
                     visitorInteractionMapper.insert(record);
                 }
             }
-            // 清除 Redis 缓存
             chatMemoryRepository.deleteByConversationId(sessionId);
             log.info("对话已同步到 MySQL 并清除 Redis，sessionId={}", sessionId);
         } catch (Exception e) {

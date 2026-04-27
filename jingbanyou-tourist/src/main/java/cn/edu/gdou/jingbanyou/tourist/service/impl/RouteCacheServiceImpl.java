@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit;
  * 职责：
  * 1. 按景区+起点+终点查询 Redis 缓存，命中则直接返回
  * 2. 润色完成后写入缓存，减少重复 MCP 调用
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Service

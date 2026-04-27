@@ -13,13 +13,15 @@ import java.util.Collections;
 
 /**
  * ASR 语音转文字服务
- * <p>
+ *
  * 使用 DashScope Paraformer 模型将语音转换为文字
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TranscribeService {
+public class TranscribeService implements ITranscribeService {
 
     /** DashScope Paraformer V1 模型 ID */
     private static final String MODEL_PARAFORMER_V1 = "paraformer-v1";

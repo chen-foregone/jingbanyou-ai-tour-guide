@@ -29,18 +29,28 @@ public class OperationStatsServiceImpl extends ServiceImpl<OperationStatsMapper,
     @Autowired
     private VisitorInteractionMapper visitorInteractionMapper;
 
+    /**
+     * 获取今日实时概览
+     *
+     * @param scenicId 景区ID
+     * @return 包含 overview 的结果
+     */
     @Override
-    public Map<String, Object> getTodayOverview(Long scenicId)
-    {
+    public Map<String, Object> getTodayOverview(Long scenicId) {
         Map<String, Object> result = new HashMap<>();
         OperationOverviewVO overview = visitorInteractionMapper.selectTodayOverview(scenicId);
         result.put("overview", overview);
         return result;
     }
 
+    /**
+     * 获取本周运营数据
+     *
+     * @param scenicId 景区ID
+     * @return 包含 dailyStats 和 summary 的结果
+     */
     @Override
-    public Map<String, Object> getWeeklyStats(Long scenicId)
-    {
+    public Map<String, Object> getWeeklyStats(Long scenicId) {
         Map<String, Object> result = new HashMap<>();
         List<OperationStats> dailyStats = visitorInteractionMapper.selectDailyStats(scenicId, 7);
         
@@ -54,9 +64,11 @@ public class OperationStatsServiceImpl extends ServiceImpl<OperationStatsMapper,
     
     /**
      * 计算本周汇总数据
+     *
+     * @param dailyStats 每日统计数据
+     * @return 汇总结果（总交互次数、独立游客数、平均响应时间等）
      */
-    private Map<String, Object> calculateWeeklySummary(List<OperationStats> dailyStats)
-    {
+    private Map<String, Object> calculateWeeklySummary(List<OperationStats> dailyStats) {
         Map<String, Object> summary = new HashMap<>();
         
         if (dailyStats == null || dailyStats.isEmpty())
@@ -116,9 +128,15 @@ public class OperationStatsServiceImpl extends ServiceImpl<OperationStatsMapper,
         return summary;
     }
 
+    /**
+     * 获取热门问答 TOP N
+     *
+     * @param scenicId 景区ID
+     * @param limit 条数限制
+     * @return 包含 hotQuestions 列表的结果
+     */
     @Override
-    public Map<String, Object> getHotQuestions(Long scenicId, Integer limit)
-    {
+    public Map<String, Object> getHotQuestions(Long scenicId, Integer limit) {
         Map<String, Object> result = new HashMap<>();
         List<HotQuestionVO> hotQuestions = visitorInteractionMapper.selectHotQuestions(scenicId, limit != null ? limit : 10);
         // 设置排名
@@ -130,9 +148,15 @@ public class OperationStatsServiceImpl extends ServiceImpl<OperationStatsMapper,
         return result;
     }
 
+    /**
+     * 生成统计数据
+     *
+     * @param scenicId 景区ID
+     * @param date 统计日期
+     * @param type 统计类型
+     */
     @Override
-    public void generateStats(Long scenicId, String date, String type)
-    {
+    public void generateStats(Long scenicId, String date, String type) {
         log.info("生成统计数据：scenicId={}, date={}, type={}", scenicId, date, type);
         // 查询当日汇总
         OperationStats summary = visitorInteractionMapper.selectDaySummary(scenicId, date);

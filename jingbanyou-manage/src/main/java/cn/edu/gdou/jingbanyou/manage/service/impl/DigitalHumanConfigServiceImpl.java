@@ -17,20 +17,31 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
-public class DigitalHumanConfigServiceImpl extends ServiceImpl<DigitalHumanConfigMapper, DigitalHumanConfig> implements IDigitalHumanConfigService
-{
+public class DigitalHumanConfigServiceImpl extends ServiceImpl<DigitalHumanConfigMapper, DigitalHumanConfig> implements IDigitalHumanConfigService {
+
+    /**
+     * 获取景区默认数字人配置
+     *
+     * @param scenicId 景区ID
+     * @return 默认数字人配置，未找到返回 null
+     */
     @Override
-    public DigitalHumanConfig getDefaultByScenicId(Long scenicId)
-    {
+    public DigitalHumanConfig getDefaultByScenicId(Long scenicId) {
         return getOne(new LambdaQueryWrapper<DigitalHumanConfig>()
                 .eq(DigitalHumanConfig::getScenicId, scenicId)
                 .eq(DigitalHumanConfig::getIsDefault, 1));
     }
 
+    /**
+     * 设置默认数字人
+     * 将指定 ID 的数字人设为景区默认，同时取消原默认
+     *
+     * @param id 数字人配置ID
+     * @param scenicId 景区ID
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void setDefault(Long id, Long scenicId)
-    {
+    public void setDefault(Long id, Long scenicId) {
         // 取消当前默认
         update(new LambdaUpdateWrapper<DigitalHumanConfig>()
                 .set(DigitalHumanConfig::getIsDefault, 0)

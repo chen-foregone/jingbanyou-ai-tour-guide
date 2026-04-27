@@ -17,16 +17,25 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * TTS 语音合成服务
+ *
+ * @author jingbanyou
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TtsService {
+public class TtsService implements ITtsService {
 
     private final DashScopeAudioSpeechModel speechModel;
 
-    @Value("${jingbanyou.tts.audio-dir:/tmp/tts}")
+    @Value("${jingbanyou.tts.audio-dir:}")
     private String audioDir;
+
+    @jakarta.annotation.PostConstruct
+    private void init() {
+        if (audioDir == null || audioDir.isEmpty()) {
+            audioDir = System.getProperty("java.io.tmpdir") + "/tts";
+        }
+    }
 
     /**
      * 流式合成语音，返回音频 chunk 流
@@ -139,6 +148,9 @@ public class TtsService {
 
     /**
      * 解析音色代码，优先使用数字人配置，否则使用默认女声
+     *
+     * @param digitalHuman 数字人配置
+     * @return 音色代码
      */
     private String resolveVoice(DigitalHumanConfig digitalHuman) {
         if (digitalHuman != null && digitalHuman.getTtsVoiceCode() != null

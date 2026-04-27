@@ -47,6 +47,8 @@
 //        log.info("开始测试 ASR 语音转文字...");
 //
 //        // TODO: 需要提供真实的音频文件路径或 byte[] 数据
+//        // 测试方法：在集成测试中使用真实音频文件，或使用 @MockBean 模拟 AudioTranscriptionModel
+//        // 当前代码（已注释）是 ASR 测试的正确写法示例，启用时替换为真实文件路径
 //        // byte[] audioData = Files.readAllBytes(Paths.get("test.wav"));
 //        // String text = transcribeService.transcribe(audioData, "test.wav", "zh");
 //
