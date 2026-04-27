@@ -12,8 +12,14 @@ import reactor.core.publisher.Flux;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
  * TTS 语音合成服务
@@ -26,6 +32,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class TtsService implements ITtsService {
 
     private final DashScopeAudioSpeechModel speechModel;
+    private final Cache<String, String> audioCache = Caffeine.newBuilder()
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .maximumSize(500)
+            .build();
 
     @Value("${jingbanyou.tts.audio-dir:}")
     private String audioDir;
@@ -82,6 +92,13 @@ public class TtsService implements ITtsService {
         }
 
         String voice = resolveVoice(digitalHuman);
+        String cacheKey = md5(text + ":" + voice);
+
+        String cached = audioCache.getIfPresent(cacheKey);
+        if (cached != null && !cached.isBlank()) {
+            log.info("[TTS] 缓存命中, cacheKey={}", cacheKey);
+            return cached;
+        }
 
         log.info("[TTS] 开始合成, text长度={}, voice={}", text.length(), voice);
 
@@ -135,6 +152,7 @@ public class TtsService implements ITtsService {
             java.nio.file.Files.write(audioPath, audioBytes);
 
             String audioUrl = "/tts/" + audioPath.getFileName().toString();
+            audioCache.put(cacheKey, audioUrl);
             log.info("[TTS] 合成成功, 音频大小={}KB, 路径={}",
                     audioBytes.length / 1024, audioUrl);
 
@@ -158,5 +176,22 @@ public class TtsService implements ITtsService {
             return digitalHuman.getTtsVoiceCode();
         }
         return "longanyang";
+    }
+
+    /**
+     * 计算 MD5 摘要
+     */
+    private String md5(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (Exception e) {
+            return String.valueOf(input.hashCode());
+        }
     }
 }

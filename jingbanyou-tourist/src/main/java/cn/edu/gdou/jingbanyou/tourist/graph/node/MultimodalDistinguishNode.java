@@ -48,12 +48,16 @@ public class MultimodalDistinguishNode implements NodeAction {
         String modelOutput = invokeWithAudio(audioData, question, sessionId);
         log.info("[多模态意图分类] 模型原始输出: {}", modelOutput);
 
-        // 解析 JSON 结果
-        String cleaned = modelOutput.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
-        JsonNode json = objectMapper.readTree(cleaned);
-        String intent = json.get("intent").asText();
-        String extractedQuestion = json.has("question") ? json.get("question").asText() : question;
-
+        String intent = "complex_other";
+        String extractedQuestion = question;
+        try {
+            String cleaned = modelOutput.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
+            JsonNode json = objectMapper.readTree(cleaned);
+            intent = json.get("intent").asText();
+            extractedQuestion = json.has("question") ? json.get("question").asText() : question;
+        } catch (Exception e) {
+            log.warn("[多模态意图分类] JSON 解析失败，使用默认意图，raw={}", modelOutput, e);
+        }
         log.info("[多模态意图分类] 解析结果: intent={}, extractedQuestion={}", intent, extractedQuestion);
 
         return state.updateState(Map.of(

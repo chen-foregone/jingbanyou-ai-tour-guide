@@ -80,4 +80,11 @@ public interface IFaqService extends IService<Faq>
             return faq != null && score != null;
         }
     }
+
+    /**
+     * 删除 FAQ 并同步清理 Redis 向量
+     *
+     * @param id FAQ ID
+     */
+    void removeFaqWithVector(Long id);
 }

@@ -5,6 +5,8 @@ import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.manage.dto.ScenicAreaVO;
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
+import cn.edu.gdou.jingbanyou.manage.entity.VisitorInteraction;
+import cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper;
 import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
@@ -61,6 +63,7 @@ public class TouristController extends BaseController {
     private final IRagPrecheckService ragPrecheckService;
     private final RedisTemplate<String, Object> chatMetadataRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final VisitorInteractionMapper visitorInteractionMapper;
 
     /**
      * 前台首屏初始化
@@ -203,6 +206,10 @@ public class TouristController extends BaseController {
             String modelUsed = (String) result.value(GraphStateKey.MODEL_USED).orElse(null);
             saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
 
+            // 记录单轮交互到 MySQL
+            chatMemoryService.recordSingleTurn(sessionId, scenicId, visitorId,
+                    message, answer, "text", intent, (int) graphCost, tokensUsed, modelUsed);
+
             return success(Map.of(
                     "reply", reply,
                     "intent", intent,
@@ -333,8 +340,12 @@ public class TouristController extends BaseController {
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
             Integer tokensUsed = (Integer) result.value(GraphStateKey.TOKENS_USED).orElse(null);
             String modelUsed = (String) result.value(GraphStateKey.MODEL_USED).orElse(null);
+            String answer = (String) result.value(GraphStateKey.ANSWER).orElse("");
             // 保存对话元数据到 Redis
             saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
+            // 记录单轮交互到 MySQL
+            chatMemoryService.recordSingleTurn(sessionId, scenicId, visitorId,
+                    message, answer != null ? answer : "", "text", intent, (int) graphCost, tokensUsed, modelUsed);
             String routeStatus = (String) result.value(GraphStateKey.ROUTE_STATUS).orElse(null);
 
             // pending 场景
@@ -349,7 +360,6 @@ public class TouristController extends BaseController {
                 );
             }
 
-            String answer = (String) result.value(GraphStateKey.ANSWER).orElse("");
             if (answer == null || answer.isBlank()) {
                 long timestamp = System.currentTimeMillis();
                 return Flux.just(

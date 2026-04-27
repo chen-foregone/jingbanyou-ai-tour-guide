@@ -96,6 +96,7 @@ public class TourRouteController extends BaseController {
     @Log(title = "路线管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
     public AjaxResult remove(@PathVariable Long id) {
-        return toAjax(tourRouteService.removeById(id));
+        tourRouteService.removeRouteWithRelations(id);
+        return success();
     }
 }

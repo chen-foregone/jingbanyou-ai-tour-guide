@@ -31,9 +31,14 @@ public class FaqController extends BaseController {
 
     /** 查询FAQ列表 */
     @GetMapping("/list")
-    public TableDataInfo list() {
+    public TableDataInfo list(@RequestParam(required = false) Long scenicId) {
         startPage();
-        List<Faq> list = faqService.list();
+        List<Faq> list;
+        if (scenicId != null) {
+            list = faqService.lambdaQuery().eq(Faq::getScenicId, scenicId).list();
+        } else {
+            list = faqService.list();
+        }
         return getDataTable(list);
     }
 
@@ -94,7 +99,8 @@ public class FaqController extends BaseController {
     @Log(title = "FAQ管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
     public AjaxResult remove(@PathVariable Long id) {
-        return toAjax(faqService.removeById(id));
+        faqService.removeFaqWithVector(id);
+        return success();
     }
 
     /** FAQ点赞 */

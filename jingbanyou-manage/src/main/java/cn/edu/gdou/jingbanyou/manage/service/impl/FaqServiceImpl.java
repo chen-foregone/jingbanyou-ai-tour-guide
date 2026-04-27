@@ -13,6 +13,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -170,5 +171,24 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
         }
 
         return new FaqMatchResult(faq, score);
+    }
+
+    /**
+     * 删除 FAQ 并同步清理 Redis 向量
+     *
+     * @param id FAQ ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeFaqWithVector(Long id) {
+        Faq faq = getById(id);
+        if (faq == null) return;
+        // 删除 Redis 向量
+        if (faq.getVectorId() != null && !faq.getVectorId().isBlank()) {
+            redisVectorStore.delete(List.of(faq.getVectorId()));
+            log.info("从 faqVectorStore 删除 FAQ 向量，id={}", id);
+        }
+        // 删除 MySQL 记录
+        removeById(id);
     }
 }

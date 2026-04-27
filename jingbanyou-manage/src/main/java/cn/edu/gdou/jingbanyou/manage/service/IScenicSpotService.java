@@ -9,4 +9,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @author jingbanyou
  */
 public interface IScenicSpotService extends IService<ScenicSpot> {
+
+    /**
+     * 删除景点并清理路线关联
+     *
+     * @param id 景点ID
+     */
+    void removeSpotWithRelations(Long id);
 }

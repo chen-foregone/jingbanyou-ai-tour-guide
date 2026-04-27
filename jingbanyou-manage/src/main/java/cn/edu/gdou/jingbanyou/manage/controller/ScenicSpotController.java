@@ -96,6 +96,7 @@ public class ScenicSpotController extends BaseController {
     @Log(title = "景点管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{id}")
     public AjaxResult remove(@PathVariable Long id) {
-        return toAjax(scenicSpotService.removeById(id));
+        scenicSpotService.removeSpotWithRelations(id);
+        return success();
     }
 }

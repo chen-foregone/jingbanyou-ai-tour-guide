@@ -76,4 +76,33 @@ public class ChatMemoryService implements IChatMemoryService {
             log.error("同步对话到 MySQL 失败，sessionId={}", sessionId, e);
         }
     }
+
+    /**
+     * 记录单轮对话（不含会话结束标志）
+     * 在 chat()/chatStream() 成功后调用，写入当前这一轮交互
+     */
+    @Override
+    @Async
+    public void recordSingleTurn(String sessionId, Long scenicId, String visitorId,
+                                  String userQuestion, String aiAnswer,
+                                  String interactionType, String intentType,
+                                  Integer responseTimeMs, Integer tokensUsed, String modelUsed) {
+        try {
+            VisitorInteraction record = new VisitorInteraction();
+            record.setSessionId(sessionId);
+            record.setScenicId(scenicId);
+            record.setVisitorId(visitorId);
+            record.setUserQuestion(userQuestion);
+            record.setAiAnswer(aiAnswer);
+            record.setInteractionType(interactionType);
+            record.setIntentType(intentType);
+            record.setResponseTimeMs(responseTimeMs);
+            record.setTokensUsed(tokensUsed);
+            record.setModelUsed(modelUsed);
+            visitorInteractionMapper.insert(record);
+            log.info("单轮对话已记录，sessionId={}, intent={}", sessionId, intentType);
+        } catch (Exception e) {
+            log.error("记录单轮对话失败，sessionId={}", sessionId, e);
+        }
+    }
 }

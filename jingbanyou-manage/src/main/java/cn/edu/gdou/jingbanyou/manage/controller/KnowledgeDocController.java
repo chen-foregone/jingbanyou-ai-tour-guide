@@ -33,11 +33,23 @@ public class KnowledgeDocController extends BaseController {
     @Autowired
     private IKnowledgeDocService knowledgeDocService;
 
-    /** 查询知识库列表 */
+    /**
+     * 查询知识库列表
+     *
+     * @param scenicId 景区ID（可选，用于过滤）
+     * @return 分页后的知识库文档列表
+     */
     @GetMapping("/list")
-    public TableDataInfo list() {
+    public TableDataInfo list(@RequestParam(required = false) Long scenicId) {
         startPage();
-        List<KnowledgeDoc> list = knowledgeDocService.list();
+        List<KnowledgeDoc> list;
+        if (scenicId != null) {
+            list = knowledgeDocService.lambdaQuery()
+                    .eq(KnowledgeDoc::getScenicId, scenicId)
+                    .list();
+        } else {
+            list = knowledgeDocService.list();
+        }
         return getDataTable(list.stream().map(this::convertToVO).collect(Collectors.toList()));
     }
 

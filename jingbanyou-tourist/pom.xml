@@ -113,6 +113,12 @@
             <version>5.1.1</version>
         </dependency>
 
+        <!-- Caffeine Cache（TTS 结果缓存，TTL 1小时） -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
 
         <!-- Spring AI Alibaba Redis ChatMemory Repository（热缓存，Redis Stack 6380） -->
         <dependency>
