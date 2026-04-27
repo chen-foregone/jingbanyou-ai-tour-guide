@@ -8,6 +8,7 @@ import cn.edu.gdou.jingbanyou.manage.service.IKnowledgeDocService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
@@ -28,14 +29,13 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, KnowledgeDoc> implements IKnowledgeDocService {
 
-    @Autowired
-    private KnowledgeChunkMapper knowledgeChunkMapper;
+    private final KnowledgeChunkMapper knowledgeChunkMapper;
 
-    @Autowired
     @Qualifier("knowledgeVectorStore")
-    private VectorStore knowledgeVectorStore;
+    private final VectorStore knowledgeVectorStore;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

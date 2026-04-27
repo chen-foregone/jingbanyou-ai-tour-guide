@@ -5,8 +5,6 @@ import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
 import cn.edu.gdou.jingbanyou.manage.dto.ScenicAreaVO;
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
-import cn.edu.gdou.jingbanyou.manage.entity.VisitorInteraction;
-import cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper;
 import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
 import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
@@ -23,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -63,7 +60,6 @@ public class TouristController extends BaseController {
     private final IRagPrecheckService ragPrecheckService;
     private final RedisTemplate<String, Object> chatMetadataRedisTemplate;
     private final ObjectMapper objectMapper;
-    private final VisitorInteractionMapper visitorInteractionMapper;
 
     /**
      * 前台首屏初始化
@@ -98,173 +94,6 @@ public class TouristController extends BaseController {
         )));
 
         return success(result);
-    }
-
-    /**
-     * 文本对话（直接返回答案）
-     * Graph 节点直接执行业务逻辑，结果写入 state.ANSWER，Controller 直接返回
-     */
-    @PostMapping("/chat")
-    public AjaxResult chat(@RequestBody Map<String, Object> request) {
-        String message = (String) request.get("message");
-        String sessionId = (String) request.get("sessionId");
-        Long scenicId = request.get("scenicId") != null
-                ? ((Number) request.get("scenicId")).longValue() : null;
-        log.info("[Chat入口] message={}, sessionId={}, scenicId={}", message, sessionId, scenicId);
-
-        if (message == null || message.isBlank()) {
-            return error("消息内容不能为空");
-        }
-        if (sessionId == null || sessionId.isBlank()) {
-            return error("sessionId 不能为空");
-        }
-
-        try {
-            // ========== 优化一：RAG 预检短路 ==========
-            long ragStart = System.currentTimeMillis();
-            Optional<String> ragAnswer = ragPrecheckService.fastMatch(message, scenicId);
-            long ragCost = System.currentTimeMillis() - ragStart;
-            if (ragAnswer.isPresent()) {
-                String cachedAnswer = ragAnswer.get();
-                log.info("[RAG-预检] 命中，直接返回，耗时={}ms", ragCost);
-                // 保存元数据到 Redis（RAG 命中不走 Graph）
-                saveChatMetadata(sessionId, "rag_prematch", null, null, (int) ragCost);
-                // 不走 Graph，不调用 TTS，直接返回
-                return success(Map.of(
-                        "reply", Map.of("id", "assistant-" + System.currentTimeMillis(),
-                                "role", "assistant", "content", cachedAnswer),
-                        "intent", "rag_prematch",
-                        "attachments", List.of(),
-                        "ragCostMs", ragCost
-                ));
-            }
-
-            long totalStart = System.currentTimeMillis();
-            long graphStart = System.currentTimeMillis();
-            String visitorId = (String) request.get("visitorId");
-            OverAllState result = executeGraph(message, sessionId, scenicId, visitorId);
-            long graphCost = System.currentTimeMillis() - graphStart;
-            log.info("[Chat] Graph执行耗时: {}ms", graphCost);
-
-            String answer = result.value(GraphStateKey.ANSWER, String.class).orElse("");
-            String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
-
-            // pending 场景返回引导语
-            String routeStatus = (String) result.value(GraphStateKey.ROUTE_STATUS).orElse(null);
-            if ("pending".equals(routeStatus)) {
-                String guideMessage = (String) result.value(GraphStateKey.GUIDE_MESSAGE)
-                        .orElse("请告诉我您的起点和终点");
-                // 保存元数据到 Redis
-                saveChatMetadata(sessionId, intent, null, null, (int) graphCost);
-                return success(Map.of(
-                        "reply", Map.of("id", "assistant-" + System.currentTimeMillis(),
-                                "role", "assistant", "content", guideMessage),
-                        "intent", intent,
-                        "attachments", List.of()
-                ));
-            }
-
-            // 调用 TTS
-            String audioUrl = "";
-            long ttsStart = System.currentTimeMillis();
-            if (answer != null && !answer.isBlank()) {
-                List<?> rawRoutes = null;
-                if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
-                    rawRoutes = result.value(GraphStateKey.POLISHED_ROUTES, List.class).orElse(null);
-                }
-                String ttsText = answer;
-                if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent) && rawRoutes != null && !rawRoutes.isEmpty()) {
-                    ttsText = buildRouteNarration(rawRoutes);
-                }
-                // 过滤 emoji，避免 CosyVoice 报 418 错误
-                ttsText = ttsText != null ? EmojiUtil.removeAllEmojis(ttsText) : "";
-                if (ttsText.length() > 500) {
-                    ttsText = ttsText.substring(0, 500);
-                }
-                DigitalHumanConfig dh = scenicId != null
-                        ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
-                audioUrl = ttsService.synthesize(ttsText, dh);
-            }
-            long ttsCost = System.currentTimeMillis() - ttsStart;
-            log.info("[TTS] 合成耗时: {}ms", ttsCost);
-
-            Map<String, Object> reply = new LinkedHashMap<>();
-            reply.put("id", "assistant-" + System.currentTimeMillis());
-            reply.put("role", "assistant");
-            reply.put("content", answer);
-
-            if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)) {
-                List<?> rawRoutes = result.value(GraphStateKey.POLISHED_ROUTES, List.class).orElse(null);
-                reply.put("attachments", rawRoutes != null && !rawRoutes.isEmpty()
-                        ? buildRouteAttachments(rawRoutes) : List.of());
-            } else {
-                reply.put("attachments", List.of());
-            }
-
-            // 保存对话元数据到 Redis
-            Integer tokensUsed = (Integer) result.value(GraphStateKey.TOKENS_USED).orElse(null);
-            String modelUsed = (String) result.value(GraphStateKey.MODEL_USED).orElse(null);
-            saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
-
-            // 记录单轮交互到 MySQL
-            chatMemoryService.recordSingleTurn(sessionId, scenicId, visitorId,
-                    message, answer, "text", intent, (int) graphCost, tokensUsed, modelUsed);
-
-            return success(Map.of(
-                    "reply", reply,
-                    "intent", intent,
-                    "voice", Map.of("audioUrl", audioUrl),
-                    "graphCostMs", graphCost,
-                    "ttsCostMs", ttsCost,
-                    "totalCostMs", System.currentTimeMillis() - totalStart
-            ));
-
-        } catch (Exception e) {
-            log.error("Graph 执行失败 sessionId={}", sessionId, e);
-            return error("处理失败: " + e.getMessage());
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> buildRouteAttachments(List<?> rawRoutes) {
-        List<Map<String, Object>> attachments = new ArrayList<>();
-
-        Map<String, Object> routeAttachment = new LinkedHashMap<>();
-        routeAttachment.put("id", "routes-" + System.currentTimeMillis());
-        routeAttachment.put("type", "routes");
-        routeAttachment.put("eyebrow", "路线推荐");
-
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (int i = 0; i < rawRoutes.size(); i++) {
-            Map<String, Object> route = (Map<String, Object>) rawRoutes.get(i);
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", "route-" + i);
-            item.put("title", route.getOrDefault("description", route.getOrDefault("title", "推荐路线")));
-            item.put("duration", route.getOrDefault("duration", ""));
-            // summary
-            StringBuilder summary = new StringBuilder();
-            if (route.get("suitableFor") != null) {
-                summary.append("适合：").append(route.get("suitableFor"));
-            }
-            if (route.get("tips") != null) {
-                if (summary.length() > 0) summary.append(" | ");
-                summary.append("提示：").append(route.get("tips"));
-            }
-            item.put("summary", summary.toString());
-            // tags
-            List<String> tags = new ArrayList<>();
-            if (route.get("suitableFor") != null) tags.add(route.get("suitableFor").toString());
-            if (route.get("strategy") != null) tags.add(route.get("strategy").toString());
-            item.put("tags", tags);
-            items.add(item);
-        }
-
-        routeAttachment.put("title", "为您推荐以下游览路线");
-        routeAttachment.put("meta", items.size() + " 条路线");
-        routeAttachment.put("items", items);
-        attachments.add(routeAttachment);
-
-        return attachments;
     }
 
     /**
@@ -323,6 +152,10 @@ public class TouristController extends BaseController {
                 log.info("[RAG-预检] 命中，直接返回，耗时={}ms", ragCost);
                 // 保存元数据到 Redis
                 saveChatMetadata(sessionId, "rag_prematch", null, null, (int) ragCost);
+                // 记录 RAG 命中交互
+                String visitorId = (String) request.get("visitorId");
+                chatMemoryService.recordSingleTurn(sessionId, scenicId, visitorId,
+                        message, cachedAnswer, "text", "rag_prematch", (int) ragCost, null, null);
                 long timestamp = System.currentTimeMillis();
                 return Flux.just(
                         metadataSse("rag_prematch", null, ragCost, timestamp),
@@ -388,14 +221,6 @@ public class TouristController extends BaseController {
             log.error("[流式对话] 执行失败", e);
             return Flux.just(errorSse("处理失败: " + e.getMessage()));
         }
-    }
-
-    private Flux<ServerSentEvent<String>> streamString(String text) {
-        int chunkSize = 20;
-        return Flux.range(0, (text.length() + chunkSize - 1) / chunkSize)
-                .map(i -> text.substring(i * chunkSize, Math.min((i + 1) * chunkSize, text.length())))
-                .filter(chunk -> !chunk.isEmpty())
-                .map(this::answerSse);
     }
 
     private ServerSentEvent<String> answerSse(String content) {
