@@ -6,7 +6,6 @@ import cn.edu.gdou.jingbanyou.manage.service.IFaqService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -27,11 +26,13 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqService {
 
-    @Qualifier("faqVectorStore")
     private final VectorStore redisVectorStore;
+
+    public FaqServiceImpl(@Qualifier("faqVectorStore") VectorStore redisVectorStore) {
+        this.redisVectorStore = redisVectorStore;
+    }
 
     /**
      * 智能匹配相似问题（Redis 向量检索）
@@ -142,14 +143,23 @@ public class FaqServiceImpl extends ServiceImpl<FaqMapper, Faq> implements IFaqS
     public FaqMatchResult matchWithScore(Long scenicId, String question, double threshold) {
         SearchRequest request = SearchRequest.builder()
                 .query(question)
-                .topK(1)
+                .topK(3)
                 .similarityThreshold(threshold)
                 .filterExpression("scenicId == '" + scenicId + "'")
                 .build();
 
         List<Document> results = redisVectorStore.similaritySearch(request);
         if (results == null || results.isEmpty()) {
+            log.debug("[RAG预检-debug] scenicId={}, question={}, topK=3 无结果", scenicId, question);
             return new FaqMatchResult(null, null);
+        }
+
+        // 打印 top3 分数分布，用于调优阈值
+        for (int i = 0; i < results.size(); i++) {
+            Document d = results.get(i);
+            log.info("[RAG预检-debug] scenicId={}, question={}, top={}, score={}, text={}",
+                    scenicId, question, i + 1, d.getScore(),
+                    d.getText().length() > 30 ? d.getText().substring(0, 30) + "..." : d.getText());
         }
 
         Document doc = results.get(0);

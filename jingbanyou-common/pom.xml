@@ -24,6 +24,12 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- 强制 jedis 版本，与 spring-data-redis:3.5.0 兼容 -->
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>6.0.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -146,16 +152,17 @@
             <artifactId>jspecify</artifactId>
         </dependency>
 
-        <!-- Redis Vector Store（向量数据库） -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-redis-store</artifactId>
-        </dependency>
-
         <!-- Jedis（RedisVectorStore 底层依赖） -->
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+
+        <!-- Redis Vector Store（向量数据库） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-redis-store</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

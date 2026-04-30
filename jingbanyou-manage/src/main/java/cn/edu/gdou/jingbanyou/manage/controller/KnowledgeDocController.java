@@ -66,6 +66,7 @@ public class KnowledgeDocController extends BaseController {
     public AjaxResult add(@Valid @RequestBody KnowledgeDocRequest request) {
         KnowledgeDoc doc = new KnowledgeDoc();
         BeanUtils.copyProperties(request, doc);
+        doc.setCreator(getUserId());
         return toAjax(knowledgeDocService.save(doc));
     }
 

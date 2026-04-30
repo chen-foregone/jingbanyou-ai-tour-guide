@@ -8,12 +8,10 @@ import cn.edu.gdou.jingbanyou.manage.service.IKnowledgeDocService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,19 +27,23 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, KnowledgeDoc> implements IKnowledgeDocService {
 
     private final KnowledgeChunkMapper knowledgeChunkMapper;
-
-    @Qualifier("knowledgeVectorStore")
     private final VectorStore knowledgeVectorStore;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     /** Embedding 模型版本（从配置读取） */
     @Value("${spring.ai.dashscope.embedding.options.model:text-embedding-v2}")
     private String embeddingModel;
+
+    public KnowledgeDocServiceImpl(KnowledgeChunkMapper knowledgeChunkMapper,
+                                  @Qualifier("knowledgeVectorStore") VectorStore knowledgeVectorStore,
+                                  ObjectMapper objectMapper) {
+        this.knowledgeChunkMapper = knowledgeChunkMapper;
+        this.knowledgeVectorStore = knowledgeVectorStore;
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * 文档向量化（文本切分 + chunk管理）

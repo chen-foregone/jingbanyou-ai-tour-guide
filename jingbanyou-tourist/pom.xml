@@ -120,6 +120,13 @@
         </dependency>
 
 
+        <!-- 强制 jedis 6.0.0（覆盖 spring-ai 组件的传递依赖 5.2.0，与 spring-data-redis 3.5.0 兼容） -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+
         <!-- Spring AI Alibaba Redis ChatMemory Repository（热缓存，Redis Stack 6380） -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>

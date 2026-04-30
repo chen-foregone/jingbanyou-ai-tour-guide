@@ -77,6 +77,7 @@ public class FaqController extends BaseController {
     @Log(title = "FAQ管理", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Valid @RequestBody Faq faq) {
+        faq.setCreator(getUserId());
         boolean saved = faqService.save(faq);
         if (saved) {
             faqService.vectorizeFaq(faq);

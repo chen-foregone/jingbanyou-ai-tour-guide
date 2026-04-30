@@ -36,6 +36,7 @@
         <spring-ai.version>1.1.2</spring-ai.version>
         <spring-ai-alibaba-extensions.version>1.1.2.1</spring-ai-alibaba-extensions.version>
         <x-file-storage.version>2.3.0</x-file-storage.version>
+        <jedis.version>6.0.0</jedis.version>
     </properties>
 
     <!-- 依赖声明 -->
@@ -173,6 +174,13 @@
                 <groupId>org.jetbrains</groupId>
                 <artifactId>annotations</artifactId>
                 <version>24.1.0</version>
+            </dependency>
+
+            <!-- 强制 Jedis 版本，解决 Spring Data Redis 与 Jedis 版本兼容性问题 -->
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>${jedis.version}</version>
             </dependency>
 
             <!-- 定时任务-->
