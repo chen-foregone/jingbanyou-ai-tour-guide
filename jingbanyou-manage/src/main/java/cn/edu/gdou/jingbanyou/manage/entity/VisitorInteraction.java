@@ -96,6 +96,11 @@ public class VisitorInteraction implements Serializable {
     /** 地理位置信息 */
     private String locationInfo;
 
+    /**
+     * 本轮在会话中的序号（从0开始）
+     */
+    private Integer turnIndex = 0;
+
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
