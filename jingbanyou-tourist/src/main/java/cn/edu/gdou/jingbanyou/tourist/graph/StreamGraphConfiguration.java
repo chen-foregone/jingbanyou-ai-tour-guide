@@ -51,8 +51,6 @@ public class StreamGraphConfiguration {
     private NodeAction generalChatFallbackNode;
     @Autowired
     private NodeAction routePolishNode;
-    @Autowired
-    private NodeAction emotionAnalysisNode;
 
     @Bean
     public CompiledGraph streamCompiledGraph() throws GraphStateException {
@@ -73,6 +71,7 @@ public class StreamGraphConfiguration {
             strategies.put(GraphStateKey.GUIDE_MESSAGE, new ReplaceStrategy());
             strategies.put(GraphStateKey.VISITOR_PROFILE, new ReplaceStrategy());
             strategies.put(GraphStateKey.ROUTE_CACHE_HIT, new ReplaceStrategy());
+            strategies.put(GraphStateKey.RETRIEVED_DOCS, new ReplaceStrategy());
             return strategies;
         };
 

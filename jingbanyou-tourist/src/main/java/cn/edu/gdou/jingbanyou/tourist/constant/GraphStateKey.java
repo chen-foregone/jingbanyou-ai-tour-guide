@@ -196,14 +196,14 @@ public final class GraphStateKey {
      * 检测到的用户情感
      * 类型：String
      * 可选值：positive / neutral / negative
-     * 来源：EmotionAnalysisNode
+     * 来源：EmotionDetectService（异步调用）
      */
     public static final String EMOTION_DETECTED = "emotionDetected";
 
     /**
      * 情感置信度
      * 类型：Double
-     * 来源：EmotionAnalysisNode
+     * 来源：EmotionDetectService（异步调用）
      */
     public static final String EMOTION_CONFIDENCE = "emotionConfidence";
 
