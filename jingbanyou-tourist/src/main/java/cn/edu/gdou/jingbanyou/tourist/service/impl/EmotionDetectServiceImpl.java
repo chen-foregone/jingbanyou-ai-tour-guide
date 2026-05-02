@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class EmotionDetectServiceImpl implements IEmotionDetectService {
 
-    private final ChatClient generalChatStreamingChatClient;
+    private final ChatClient.Builder chatClientBuilder;
     private final RedisTemplate<String, Object> chatMetadataRedisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -113,7 +113,18 @@ public class EmotionDetectServiceImpl implements IEmotionDetectService {
                     当前消息：%s
                     """, chatHistory, currentMessage);
 
-            String response = generalChatStreamingChatClient.prompt()
+            String response = chatClientBuilder.build()
+                    .prompt()
+                    .system("""
+                        你是一个景区智能导游的情感分析助手。
+                        分析以下对话中用户的情感倾向，只返回 JSON 格式：
+                        {"emotion": "positive" | "neutral" | "negative", "confidence": 0.0 ~ 1.0}
+
+                        情感分类标准：
+                        - positive（正面）：表达满意、感谢、赞美、期待、愉悦等积极情绪
+                        - neutral（中性）：普通咨询、询问事实、不带情绪色彩的提问
+                        - negative（负面）：表达不满、抱怨、投诉、焦虑、失望、批评等消极情绪
+                        """)
                     .user(prompt)
                     .call()
                     .content();

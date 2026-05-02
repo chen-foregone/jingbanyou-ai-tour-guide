@@ -1,5 +1,6 @@
-package cn.edu.gdou.jingbanyou.tourist.service;
+package cn.edu.gdou.jingbanyou.tourist.service.impl;
 
+import cn.edu.gdou.jingbanyou.tourist.service.ITranscribeService;
 import com.alibaba.cloud.ai.dashscope.audio.transcription.DashScopeAudioTranscriptionOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

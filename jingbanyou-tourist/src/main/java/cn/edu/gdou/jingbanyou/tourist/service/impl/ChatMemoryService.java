@@ -1,11 +1,12 @@
-package cn.edu.gdou.jingbanyou.tourist.service;
+package cn.edu.gdou.jingbanyou.tourist.service.impl;
 
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorConversation;
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorInteraction;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorConversationMapper;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper;
+import cn.edu.gdou.jingbanyou.tourist.service.IChatMemoryService;
+import cn.edu.gdou.jingbanyou.tourist.service.IEmotionDetectService;
 import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
@@ -13,8 +14,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 对话记忆服务
@@ -231,6 +234,45 @@ public class ChatMemoryService implements IChatMemoryService {
             }
         } catch (Exception e) {
             log.error("更新交互情感失败，sessionId={}", sessionId, e);
+        }
+    }
+
+    @Override
+    public void saveChatMetadata(String sessionId, String intent, Integer tokensUsed,
+                                  String modelUsed, int responseTimeMs) {
+        try {
+            Map<String, Object> meta = new HashMap<>();
+            meta.put("intent", intent);
+            meta.put("tokensUsed", tokensUsed);
+            meta.put("modelUsed", modelUsed);
+            meta.put("responseTimeMs", responseTimeMs);
+            String json = objectMapper.writeValueAsString(meta);
+            chatMetadataRedisTemplate.opsForValue().set("chat:meta:" + sessionId, json, 1, TimeUnit.HOURS);
+        } catch (Exception e) {
+            log.warn("保存对话元数据失败 sessionId={}", sessionId, e);
+        }
+    }
+
+    @Override
+    public Map<String, Object> getChatMetadata(String sessionId) {
+        try {
+            Object raw = chatMetadataRedisTemplate.opsForValue().get("chat:meta:" + sessionId);
+            if (raw == null) return null;
+            if (raw instanceof String) {
+                return objectMapper.readValue((String) raw, Map.class);
+            }
+        } catch (Exception e) {
+            log.warn("获取对话元数据失败 sessionId={}", sessionId, e);
+        }
+        return null;
+    }
+
+    @Override
+    public void deleteChatMetadata(String sessionId) {
+        try {
+            chatMetadataRedisTemplate.delete("chat:meta:" + sessionId);
+        } catch (Exception e) {
+            log.warn("删除对话元数据失败 sessionId={}", sessionId, e);
         }
     }
 }

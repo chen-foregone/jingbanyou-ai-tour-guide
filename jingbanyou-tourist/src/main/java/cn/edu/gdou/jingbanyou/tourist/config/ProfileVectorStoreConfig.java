@@ -28,7 +28,7 @@ public class ProfileVectorStoreConfig {
         return RedisVectorStore.builder(new JedisPooled(redisHost, redisPort), embeddingModel)
                 .indexName("profile-index")
                 .prefix("profile:")
-                .initializeSchema(false)
+                .initializeSchema(true)
                 .build();
     }
 }

@@ -1,7 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.service;
 
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
-import cn.edu.gdou.jingbanyou.tourist.service.ProfileVectorStoreService.SimilarProfile;
+import cn.edu.gdou.jingbanyou.tourist.service.impl.ProfileVectorStoreService.SimilarProfile;
 import java.util.List;
 
 /**

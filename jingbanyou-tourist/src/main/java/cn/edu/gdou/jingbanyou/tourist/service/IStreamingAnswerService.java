@@ -30,7 +30,7 @@ public interface IStreamingAnswerService {
      * @param visitorId    游客ID
      * @param intent       意图类型
      * @param userMessage  用户原始消息
-     * @param finalPrompt  最终用户 prompt（由调用方构造好）
+     * @param retrievedDocs Graph 检索节点写入的 RAG 上下文
      * @param digitalHuman 数字人配置（用于 TTS）
      * @param rawRoutes    路线数据（route_plan intent 专用，可为 null）
      * @param intentType   意图类型字符串
@@ -45,6 +45,7 @@ public interface IStreamingAnswerService {
             String visitorId,
             String intent,
             String userMessage,
+            String retrievedDocs,
             DigitalHumanConfig digitalHuman,
             List<?> rawRoutes,
             String intentType,

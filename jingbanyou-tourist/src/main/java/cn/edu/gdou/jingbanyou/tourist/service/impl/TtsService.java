@@ -1,6 +1,7 @@
-package cn.edu.gdou.jingbanyou.tourist.service;
+package cn.edu.gdou.jingbanyou.tourist.service.impl;
 
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
+import cn.edu.gdou.jingbanyou.tourist.service.ITtsService;
 import com.alibaba.cloud.ai.dashscope.audio.tts.DashScopeAudioSpeechModel;
 import com.alibaba.cloud.ai.dashscope.audio.tts.DashScopeAudioSpeechOptions;
 import lombok.RequiredArgsConstructor;

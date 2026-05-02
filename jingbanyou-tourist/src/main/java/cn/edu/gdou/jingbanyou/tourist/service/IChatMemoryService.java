@@ -1,5 +1,7 @@
 package cn.edu.gdou.jingbanyou.tourist.service;
 
+import java.util.Map;
+
 /**
  * 对话记忆服务接口
  *
@@ -73,4 +75,31 @@ public interface IChatMemoryService {
      * @param emotionConfidence 情感置信度
      */
     void updateLastInteractionEmotion(String sessionId, String emotionDetected, Double emotionConfidence);
+
+    /**
+     * 保存对话元数据到 Redis
+     *
+     * @param sessionId     会话ID
+     * @param intent        意图类型
+     * @param tokensUsed    消耗 Token 数量
+     * @param modelUsed     使用的 AI 模型
+     * @param responseTimeMs 响应耗时（毫秒）
+     */
+    void saveChatMetadata(String sessionId, String intent, Integer tokensUsed,
+                          String modelUsed, int responseTimeMs);
+
+    /**
+     * 从 Redis 获取对话元数据
+     *
+     * @param sessionId 会话ID
+     * @return 元数据 Map
+     */
+    Map<String, Object> getChatMetadata(String sessionId);
+
+    /**
+     * 从 Redis 删除对话元数据
+     *
+     * @param sessionId 会话ID
+     */
+    void deleteChatMetadata(String sessionId);
 }

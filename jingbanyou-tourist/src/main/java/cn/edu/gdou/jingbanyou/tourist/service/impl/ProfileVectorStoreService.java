@@ -1,6 +1,7 @@
-package cn.edu.gdou.jingbanyou.tourist.service;
+package cn.edu.gdou.jingbanyou.tourist.service.impl;
 
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
+import cn.edu.gdou.jingbanyou.tourist.service.IProfileVectorStoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.vectorstore.SearchRequest;
