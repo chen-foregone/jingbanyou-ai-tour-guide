@@ -6,6 +6,7 @@ USE jingbanyou;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS `manage_visitor_conversation`;
 DROP TABLE IF EXISTS `manage_visitor_interaction`;
 DROP TABLE IF EXISTS `manage_visitor_analysis`;
 DROP TABLE IF EXISTS `manage_operation_stats`;

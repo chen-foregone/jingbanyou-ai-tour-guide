@@ -193,7 +193,7 @@ public class TouristController extends BaseController {
                 rawRoutes = null;
             }
 
-            long timestamp = System.currentTimeMillis();
+            long timestamp = System.currentTimeMillis();节点之间"的异步调度
             return Flux.just(metadataSse(intent, rawRoutes, graphCost, timestamp))
                     .concatWith(Flux.defer(() -> Flux.just(answerSse(answer))))
                     .concatWith(Flux.defer(() -> streamAudio(answer, intent, rawRoutes, scenicId, timestamp)))

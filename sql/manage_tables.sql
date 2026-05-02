@@ -270,6 +270,7 @@ CREATE TABLE `manage_visitor_interaction` (
     `device_type` VARCHAR(50) COMMENT '设备类型 mobile/desktop/kiosk',
     `ip_address` VARCHAR(50) COMMENT 'IP 地址',
     `location_info` VARCHAR(255) COMMENT '地理位置信息',
+    `turn_index` INT NOT NULL DEFAULT 0 COMMENT '本轮在会话中的序号（从0开始）',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`scenic_id`) REFERENCES `manage_scenic_area`(`id`),
     FOREIGN KEY (`human_id`) REFERENCES `manage_digital_human_config`(`id`),
@@ -280,6 +281,33 @@ CREATE TABLE `manage_visitor_interaction` (
     INDEX `idx_emotion` (`emotion_detected`),
     INDEX `idx_intent` (`intent_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='游客 - 数字人交互记录表';
+
+-- ====================== 12. 游客会话记录表（会话级元数据） ======================
+DROP TABLE IF EXISTS `manage_visitor_conversation`;
+CREATE TABLE `manage_visitor_conversation` (
+    `session_id` VARCHAR(64) PRIMARY KEY COMMENT '会话ID（雪花ID）',
+    `scenic_id` BIGINT COMMENT '景区ID',
+    `human_id` BIGINT COMMENT '数字人配置ID',
+    `visitor_id` VARCHAR(64) COMMENT '游客ID',
+    `title` VARCHAR(255) COMMENT '会话标题（首轮用户消息截取）',
+    `first_message` VARCHAR(500) COMMENT '首轮用户消息摘要',
+    `last_message` VARCHAR(500) COMMENT '末轮用户消息摘要',
+    `turn_count` INT NOT NULL DEFAULT 0 COMMENT '对话轮次',
+    `intent_type` VARCHAR(50) COMMENT '主要意图类型',
+    `emotion_detected` VARCHAR(20) COMMENT '情感检测结果 positive/neutral/negative',
+    `emotion_confidence` DECIMAL(5,4) COMMENT '情感置信度',
+    `duration_ms` BIGINT COMMENT '会话总耗时（毫秒）',
+    `start_time` DATETIME COMMENT '会话开始时间',
+    `end_time` DATETIME COMMENT '会话结束时间',
+    `interaction_type` VARCHAR(10) DEFAULT 'text' COMMENT '交互类型 text/voice',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`scenic_id`) REFERENCES `manage_scenic_area`(`id`),
+    FOREIGN KEY (`human_id`) REFERENCES `manage_digital_human_config`(`id`),
+    INDEX `idx_visitor_id` (`visitor_id`),
+    INDEX `idx_scenic_id` (`scenic_id`),
+    INDEX `idx_start_time` (`start_time`),
+    INDEX `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='游客会话记录表';
 
 -- ====================== 12. 游客感受度分析报告表 ======================
 DROP TABLE IF EXISTS `manage_visitor_analysis`;

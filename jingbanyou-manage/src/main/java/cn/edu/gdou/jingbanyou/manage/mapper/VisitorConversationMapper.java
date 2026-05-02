@@ -1,5 +1,6 @@
 package cn.edu.gdou.jingbanyou.manage.mapper;
 
+import cn.edu.gdou.jingbanyou.manage.dto.ConversationListVO;
 import cn.edu.gdou.jingbanyou.manage.entity.VisitorConversation;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
