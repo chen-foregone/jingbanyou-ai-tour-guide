@@ -16,7 +16,7 @@ ruoyi:
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
-  port: 8081
+  port: 9091
   # 监听所有网卡，允许内网其他机器访问
   address: 0.0.0.0
   servlet:

@@ -4,13 +4,17 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.CacheControl;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import java.util.concurrent.Executor;
 import cn.edu.gdou.jingbanyou.common.config.RuoYiConfig;
 import cn.edu.gdou.jingbanyou.common.constant.Constants;
 import cn.edu.gdou.jingbanyou.framework.interceptor.RepeatSubmitInterceptor;
@@ -46,6 +50,25 @@ public class ResourcesConfig implements WebMvcConfigurer
     public void addInterceptors(InterceptorRegistry registry)
     {
         registry.addInterceptor(repeatSubmitInterceptor).addPathPatterns("/**");
+    }
+
+    /**
+     * 异步请求线程池（替换默认 SimpleAsyncTaskExecutor）
+     */
+    @Override
+    public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
+        configurer.setTaskExecutor((AsyncTaskExecutor) mvcAsyncTaskExecutor());
+    }
+
+    @Bean
+    public Executor mvcAsyncTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("mvc-async-");
+        executor.initialize();
+        return executor;
     }
 
     /**
