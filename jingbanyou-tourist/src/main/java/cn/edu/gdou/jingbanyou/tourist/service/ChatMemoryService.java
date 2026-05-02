@@ -5,6 +5,7 @@ import cn.edu.gdou.jingbanyou.manage.entity.VisitorInteraction;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorConversationMapper;
 import cn.edu.gdou.jingbanyou.manage.mapper.VisitorInteractionMapper;
 import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
@@ -189,7 +190,7 @@ public class ChatMemoryService implements IChatMemoryService {
      */
     @Override
     @Async
-    public void recordSingleTurn(String sessionId, Long scenicId, String visitorId,
+    public void recordSingleTurn(String sessionId, Long scenicId, Long humanId, String visitorId,
                                   String userQuestion, String aiAnswer,
                                   String interactionType, String intentType,
                                   Integer responseTimeMs, Integer tokensUsed, String modelUsed) {
@@ -197,6 +198,7 @@ public class ChatMemoryService implements IChatMemoryService {
             VisitorInteraction record = new VisitorInteraction();
             record.setSessionId(sessionId);
             record.setScenicId(scenicId);
+            record.setHumanId(humanId);
             record.setVisitorId(visitorId);
             record.setUserQuestion(userQuestion);
             record.setAiAnswer(aiAnswer);
@@ -209,6 +211,26 @@ public class ChatMemoryService implements IChatMemoryService {
             log.info("单轮对话已记录，sessionId={}, intent={}", sessionId, intentType);
         } catch (Exception e) {
             log.error("记录单轮对话失败，sessionId={}", sessionId, e);
+        }
+    }
+
+    @Override
+    public void updateLastInteractionEmotion(String sessionId, String emotionDetected, Double emotionConfidence) {
+        try {
+            VisitorInteraction interaction = visitorInteractionMapper
+                    .selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<VisitorInteraction>()
+                            .eq(VisitorInteraction::getSessionId, sessionId)
+                            .orderByDesc(VisitorInteraction::getId)
+                            .last("LIMIT 1"))
+                    .stream().findFirst().orElse(null);
+            if (interaction != null) {
+                interaction.setEmotionDetected(emotionDetected);
+                interaction.setEmotionConfidence(emotionConfidence);
+                visitorInteractionMapper.updateById(interaction);
+                log.info("已更新交互情感，sessionId={}, emotion={}", sessionId, emotionDetected);
+            }
+        } catch (Exception e) {
+            log.error("更新交互情感失败，sessionId={}", sessionId, e);
         }
     }
 }

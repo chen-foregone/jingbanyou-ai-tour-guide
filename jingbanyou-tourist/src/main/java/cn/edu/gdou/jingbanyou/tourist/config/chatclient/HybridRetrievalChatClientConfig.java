@@ -1,6 +1,5 @@
 package cn.edu.gdou.jingbanyou.tourist.config.chatclient;
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeResponseFormat;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import lombok.Data;
 import org.springframework.ai.chat.client.ChatClient;
@@ -23,22 +22,16 @@ public class HybridRetrievalChatClientConfig {
     @Bean("hybridRetrievalChatClient")
     public ChatClient chatClient(ChatClient.Builder builder,
                                  MessageChatMemoryAdvisor chatMemoryAdvisor) {
-        DashScopeChatOptions.Builder optionsBuilder = DashScopeChatOptions.builder()
+        DashScopeChatOptions options = DashScopeChatOptions.builder()
                 .withModel(model.getName())
                 .withTemperature(model.getTemperature())
                 .withTopP(model.getTopP())
-                .withMaxToken(model.getMaxTokens());
-        if (model.getResponseFormat() != null) {
-            optionsBuilder.withResponseFormat(
-                    DashScopeResponseFormat.builder()
-                            .type(DashScopeResponseFormat.Type.valueOf(model.getResponseFormat()))
-                            .build()
-            );
-        }
+                .withMaxToken(model.getMaxTokens())
+                .build();
         return builder
                 .defaultSystem(prompt)
                 .defaultAdvisors(chatMemoryAdvisor)
-                .defaultOptions(optionsBuilder.build())
+                .defaultOptions(options)
                 .build();
     }
 
@@ -48,6 +41,5 @@ public class HybridRetrievalChatClientConfig {
         private Double temperature;
         private Double topP;
         private Integer maxTokens;
-        private String responseFormat;
     }
 }

@@ -16,6 +16,7 @@ import cn.edu.gdou.jingbanyou.tourist.service.IEmotionDetectService;
 import cn.edu.gdou.jingbanyou.tourist.service.ITtsService;
 import cn.edu.gdou.jingbanyou.tourist.service.ITranscribeService;
 import cn.edu.gdou.jingbanyou.tourist.service.IVisitorConversationService;
+import cn.edu.gdou.jingbanyou.tourist.service.IStreamingAnswerService;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -64,6 +65,7 @@ public class TouristController extends BaseController {
     private final ObjectMapper objectMapper;
     private final IVisitorConversationService visitorConversationService;
     private final IEmotionDetectService emotionDetectService;
+    private final IStreamingAnswerService streamingAnswerService;
 
     /**
      * 前台首屏初始化
@@ -121,6 +123,10 @@ public class TouristController extends BaseController {
         if (visitorId != null && !visitorId.isBlank()) {
             initialState.put(GraphStateKey.VISITOR_ID, visitorId);
         }
+
+        // fire-and-forget：情感分析异步执行，不阻塞主流程
+        emotionDetectService.detectEmotionAsync(sessionId, message, null);
+
         CompiledGraph graph = streamGraphConfiguration.streamCompiledGraph();
         return graph.invoke(initialState)
                 .orElseThrow(() -> new RuntimeException("Graph 执行返回空结果"));
@@ -160,7 +166,9 @@ public class TouristController extends BaseController {
             // 保存对话元数据到 Redis
             saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
             // 记录单轮交互到 MySQL
-            chatMemoryService.recordSingleTurn(sessionId, scenicId, visitorId,
+            Long humanId = scenicId != null
+                    ? digitalHumanConfigService.getDefaultByScenicId(scenicId).getId() : null;
+            chatMemoryService.recordSingleTurn(sessionId, scenicId, humanId, visitorId,
                     message, answer != null ? answer : "", "text", intent, (int) graphCost, tokensUsed, modelUsed);
             String routeStatus = (String) result.value(GraphStateKey.ROUTE_STATUS).orElse(null);
 
@@ -193,10 +201,18 @@ public class TouristController extends BaseController {
                 rawRoutes = null;
             }
 
-            long timestamp = System.currentTimeMillis();节点之间"的异步调度
+            long timestamp = System.currentTimeMillis();
+            long startTimestamp = timestamp;
+            int graphCostMs = (int) graphCost;
+            DigitalHumanConfig digitalHuman = scenicId != null
+                    ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
+
             return Flux.just(metadataSse(intent, rawRoutes, graphCost, timestamp))
-                    .concatWith(Flux.defer(() -> Flux.just(answerSse(answer))))
-                    .concatWith(Flux.defer(() -> streamAudio(answer, intent, rawRoutes, scenicId, timestamp)))
+                    .concatWith(streamingAnswerService.streamAnswer(
+                            sessionId, scenicId, humanId, visitorId,
+                            intent, message, digitalHuman,
+                            rawRoutes, intent, graphCostMs, startTimestamp
+                    ))
                     .concatWith(Flux.just(doneSse(timestamp)))
                     .doOnError(e -> log.error("[流式对话] 流发送失败", e));
 
@@ -406,6 +422,16 @@ public class TouristController extends BaseController {
 
         chatMemoryService.syncToMySQL(sessionId, scenicId, visitorId,
                 interactionType, intentType, responseTimeMs, tokensUsed, modelUsed);
+
+        // 读取情感数据并更新最近一条交互记录
+        Map<String, Object> emotionData = emotionDetectService.getEmotionResult(sessionId);
+        if (emotionData != null) {
+            chatMemoryService.updateLastInteractionEmotion(sessionId,
+                    (String) emotionData.get("emotion"),
+                    emotionData.get("confidence") instanceof Number
+                            ? ((Number) emotionData.get("confidence")).doubleValue() : null);
+            emotionDetectService.deleteEmotionResult(sessionId);
+        }
 
         // 清除元数据 key
         deleteChatMetadata(sessionId);

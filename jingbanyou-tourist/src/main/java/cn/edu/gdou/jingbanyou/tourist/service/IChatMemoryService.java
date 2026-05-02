@@ -59,8 +59,18 @@ public interface IChatMemoryService {
      * @param tokensUsed      消耗 Token 数量
      * @param modelUsed       使用的 AI 模型
      */
-    void recordSingleTurn(String sessionId, Long scenicId, String visitorId,
+    void recordSingleTurn(String sessionId, Long scenicId, Long humanId, String visitorId,
                           String userQuestion, String aiAnswer,
                           String interactionType, String intentType,
                           Integer responseTimeMs, Integer tokensUsed, String modelUsed);
+
+    /**
+     * 更新最近一条交互记录的情感数据
+     * 在 endChat 时调用，补充异步检测到的情感信息
+     *
+     * @param sessionId 会话ID
+     * @param emotionDetected  情感类型（positive/neutral/negative）
+     * @param emotionConfidence 情感置信度
+     */
+    void updateLastInteractionEmotion(String sessionId, String emotionDetected, Double emotionConfidence);
 }

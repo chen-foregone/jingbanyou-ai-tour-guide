@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import reactor.core.publisher.Flux;
 
 /**
  * 闲聊兜底节点（非景区问题 / 投诉处理）
@@ -27,10 +28,13 @@ import java.util.Map;
 public class GeneralChatFallbackNode implements NodeAction {
 
     private final ChatClient chatClient;
+    private final ChatClient streamingChatClient;
 
     public GeneralChatFallbackNode(
-            @Qualifier("generalChatChatClient") ChatClient chatClient) {
+            @Qualifier("generalChatChatClient") ChatClient chatClient,
+            @Qualifier("generalChatStreamingChatClient") ChatClient streamingChatClient) {
         this.chatClient = chatClient;
+        this.streamingChatClient = streamingChatClient;
     }
 
     @Override
@@ -55,5 +59,17 @@ public class GeneralChatFallbackNode implements NodeAction {
 
         // Advisor After 自动写入 assistant 消息，无需手动处理
         return state.updateState(Map.of(ANSWER, answer));
+    }
+
+    /**
+     * 流式答案（供 StreamingAnswerService 调用）
+     */
+    public Flux<String> streamAnswer(String question, String sessionId) {
+        String userText = "游客消息：" + question;
+        return streamingChatClient.prompt()
+                .user(userText)
+                .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
+                .stream()
+                .content();
     }
 }

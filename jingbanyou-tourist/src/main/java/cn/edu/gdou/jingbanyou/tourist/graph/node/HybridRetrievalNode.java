@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import reactor.core.publisher.Flux;
 
 /**
  * 混合检索节点
@@ -36,15 +37,18 @@ public class HybridRetrievalNode implements NodeAction {
     private final VectorStore knowledgeVectorStore;
     private final VectorStore faqVectorStore;
     private final ChatClient chatClient;
+    private final ChatClient streamingChatClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public HybridRetrievalNode(
             VectorStore knowledgeVectorStore,
             VectorStore faqVectorStore,
-            @Qualifier("hybridRetrievalChatClient") ChatClient chatClient) {
+            @Qualifier("hybridRetrievalChatClient") ChatClient chatClient,
+            @Qualifier("hybridRetrievalStreamingChatClient") ChatClient streamingChatClient) {
         this.knowledgeVectorStore = knowledgeVectorStore;
         this.faqVectorStore = faqVectorStore;
         this.chatClient = chatClient;
+        this.streamingChatClient = streamingChatClient;
     }
 
     @Override
@@ -125,5 +129,66 @@ public class HybridRetrievalNode implements NodeAction {
 
         log.info("[混合检索] 最终答案: {}", content);
         return state.updateState(Map.of(ANSWER, content));
+    }
+
+    /**
+     * 流式答案（供 StreamingAnswerService 调用）
+     *
+     * @param question 用户问题
+     * @param scenicId 景区ID
+     * @param sessionId 会话ID
+     * @return AI 输出的 token 流
+     */
+    public Flux<String> streamAnswer(String question, Long scenicId, String sessionId) {
+        // 1. 查询 FAQ 向量库
+        SearchRequest faqRequest = SearchRequest.builder()
+                .query(question)
+                .topK(3)
+                .similarityThreshold(0.0)
+                .build();
+        List<Document> faqDocs = faqVectorStore.similaritySearch(faqRequest);
+
+        // 2. 查询景区知识向量库
+        SearchRequest.Builder kbRequestBuilder = SearchRequest.builder()
+                .query(question)
+                .topK(3)
+                .similarityThreshold(0.0);
+        if (scenicId != null && scenicId > 0) {
+            kbRequestBuilder.filterExpression(new FilterExpressionBuilder().eq("scenicId", scenicId).build());
+        }
+        List<Document> kbDocs = knowledgeVectorStore.similaritySearch(kbRequestBuilder.build());
+
+        // 3. 构建上下文
+        String userText;
+        if (faqDocs.isEmpty() && kbDocs.isEmpty()) {
+            userText = "游客问题：" + question + "\n\n（未检索到相关信息）";
+        } else {
+            StringBuilder sb = new StringBuilder();
+            sb.append("游客问题：").append(question).append("\n\n");
+            if (!faqDocs.isEmpty()) {
+                sb.append("=== FAQ 参考资料 ===\n");
+                for (int i = 0; i < faqDocs.size(); i++) {
+                    sb.append("FAQ").append(i + 1).append(": ").append(faqDocs.get(i).getText()).append("\n");
+                }
+            }
+            if (!kbDocs.isEmpty()) {
+                sb.append("=== 景区知识 ===\n");
+                for (int i = 0; i < kbDocs.size(); i++) {
+                    sb.append("景区知识").append(i + 1).append(": ").append(kbDocs.get(i).getText()).append("\n");
+                }
+            }
+            userText = sb.toString();
+        }
+
+        // 4. 流式 LLM 调用
+        if (faqDocs.isEmpty() && kbDocs.isEmpty()) {
+            return Flux.just("这个问题我暂时还不太清楚，建议您咨询景区工作人员。");
+        }
+
+        return streamingChatClient.prompt()
+                .user(userText)
+                .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
+                .stream()
+                .content();
     }
 }
