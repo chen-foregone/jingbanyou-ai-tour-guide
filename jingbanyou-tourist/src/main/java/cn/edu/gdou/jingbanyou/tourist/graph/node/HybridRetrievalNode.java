@@ -3,6 +3,8 @@ package cn.edu.gdou.jingbanyou.tourist.graph.node;
 import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -19,13 +21,12 @@ import java.util.Map;
 /**
  * 混合检索节点
  *
- * 任务：FAQ 和景区知识库并行检索，一次 LLM 生成答案
+ * 任务：FAQ 和景区知识库并行检索，一次 LLM 调用返回答案和置信度
  * 流程：
- *   1. 查询 FAQ 向量库
- *   2. 查询景区知识向量库
- *   3. 合并结果，一次 LLM 调用生成最终答案
+ *   1. 查询 FAQ 向量库（topK=3）
+ *   2. 查询景区知识向量库（topK=3）
+ *   3. 一次 LLM 调用，同时返回 answer + confidence + reason
  *
- * @author jingbanyou
  * @author jingbanyou
  */
 @Slf4j
@@ -35,6 +36,7 @@ public class HybridRetrievalNode implements NodeAction {
     private final VectorStore knowledgeVectorStore;
     private final VectorStore faqVectorStore;
     private final ChatClient chatClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public HybridRetrievalNode(
             VectorStore knowledgeVectorStore,
@@ -56,37 +58,24 @@ public class HybridRetrievalNode implements NodeAction {
         // 1. 查询 FAQ 向量库
         SearchRequest faqRequest = SearchRequest.builder()
                 .query(question)
-                .topK(2)
+                .topK(3)
                 .similarityThreshold(0.0)
                 .build();
         List<Document> faqDocs = faqVectorStore.similaritySearch(faqRequest);
-
-        StringBuilder faqContext = new StringBuilder();
-        for (int i = 0; i < faqDocs.size(); i++) {
-            faqContext.append("FAQ").append(i + 1).append(": ").append(faqDocs.get(i).getText()).append("\n");
-        }
         log.info("[混合检索] FAQ检索到 {} 条", faqDocs.size());
 
-        // 2. 查询景区知识向量库（使用 scenicId 过滤器，在 Redis 层直接过滤）
+        // 2. 查询景区知识向量库
         SearchRequest.Builder kbRequestBuilder = SearchRequest.builder()
                 .query(question)
-                .topK(5)
+                .topK(3)
                 .similarityThreshold(0.0);
         if (scenicId != null && scenicId > 0) {
             kbRequestBuilder.filterExpression(new FilterExpressionBuilder().eq("scenicId", scenicId).build());
         }
         List<Document> kbDocs = knowledgeVectorStore.similaritySearch(kbRequestBuilder.build());
-        log.info("[混合检索] scenicId={} 知识库检索到 {} 条", scenicId, kbDocs.size());
+        log.info("[混合检索] 知识库检索到 {} 条", kbDocs.size());
 
-        StringBuilder kbContext = new StringBuilder();
-        for (int i = 0; i < kbDocs.size(); i++) {
-            Document doc = kbDocs.get(i);
-            kbContext.append("景区知识").append(i + 1).append(": ").append(doc.getText()).append("\n");
-            log.debug("[混合检索] 知识库结果{}: content前50字={}", i,
-                    doc.getText().substring(0, Math.min(50, doc.getText().length())));
-        }
-
-        // 3. 合并上下文，一次 LLM 生成
+        // 3. 构建上下文
         String userText;
         if (faqDocs.isEmpty() && kbDocs.isEmpty()) {
             userText = "游客问题：" + question + "\n\n（未检索到相关信息）";
@@ -94,29 +83,47 @@ public class HybridRetrievalNode implements NodeAction {
             StringBuilder sb = new StringBuilder();
             sb.append("游客问题：").append(question).append("\n\n");
             if (!faqDocs.isEmpty()) {
-                sb.append("=== FAQ 参考资料 ===\n").append(faqContext);
+                sb.append("=== FAQ 参考资料 ===\n");
+                for (int i = 0; i < faqDocs.size(); i++) {
+                    sb.append("FAQ").append(i + 1).append(": ").append(faqDocs.get(i).getText()).append("\n");
+                }
             }
             if (!kbDocs.isEmpty()) {
-                sb.append("=== 景区知识 ===\n").append(kbContext);
+                sb.append("=== 景区知识 ===\n");
+                for (int i = 0; i < kbDocs.size(); i++) {
+                    sb.append("景区知识").append(i + 1).append(": ").append(kbDocs.get(i).getText()).append("\n");
+                }
             }
             userText = sb.toString();
         }
 
-        log.info("[混合检索] 合并上下文，FAQ={}条 知识库={}条", faqDocs.size(), kbDocs.size());
-
+        // 4. 一次 LLM 调用，同时返回答案和置信度
         String content;
         if (faqDocs.isEmpty() && kbDocs.isEmpty()) {
             content = "这个问题我暂时还不太清楚，建议您咨询景区工作人员。";
+            log.info("[混合检索] 无检索结果，使用默认回复");
         } else {
-            content = chatClient.prompt()
+            String rawOutput = chatClient.prompt()
                     .user(userText)
                     .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
                     .call()
                     .content();
+            log.info("[混合检索] LLM原始输出: {}", rawOutput);
+
+            try {
+                String cleaned = rawOutput.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
+                JsonNode json = objectMapper.readTree(cleaned);
+                content = json.get("answer").asText();
+                String confidence = json.has("confidence") ? json.get("confidence").asText() : "medium";
+                String reason = json.has("reason") ? json.get("reason").asText() : "";
+                log.info("[混合检索] 置信度={}, reason={}", confidence, reason);
+            } catch (Exception e) {
+                log.warn("[混合检索] JSON解析失败，使用原始输出", e);
+                content = rawOutput;
+            }
         }
 
-        log.info("[混合检索] 生成结果: {}", content);
-
+        log.info("[混合检索] 最终答案: {}", content);
         return state.updateState(Map.of(ANSWER, content));
     }
 }

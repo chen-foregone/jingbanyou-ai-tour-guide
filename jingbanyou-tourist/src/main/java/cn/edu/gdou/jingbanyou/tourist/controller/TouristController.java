@@ -3,6 +3,8 @@ package cn.edu.gdou.jingbanyou.tourist.controller;
 import cn.edu.gdou.jingbanyou.common.annotation.Anonymous;
 import cn.edu.gdou.jingbanyou.common.core.controller.BaseController;
 import cn.edu.gdou.jingbanyou.common.core.domain.AjaxResult;
+import cn.edu.gdou.jingbanyou.manage.dto.ConversationDetailVO;
+import cn.edu.gdou.jingbanyou.manage.dto.ConversationListVO;
 import cn.edu.gdou.jingbanyou.manage.dto.ScenicAreaVO;
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
 import cn.edu.gdou.jingbanyou.manage.service.IDigitalHumanConfigService;
@@ -10,9 +12,10 @@ import cn.edu.gdou.jingbanyou.manage.service.IScenicAreaService;
 import cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey;
 import cn.edu.gdou.jingbanyou.tourist.graph.StreamGraphConfiguration;
 import cn.edu.gdou.jingbanyou.tourist.service.IChatMemoryService;
-import cn.edu.gdou.jingbanyou.tourist.service.IRagPrecheckService;
+import cn.edu.gdou.jingbanyou.tourist.service.IEmotionDetectService;
 import cn.edu.gdou.jingbanyou.tourist.service.ITtsService;
 import cn.edu.gdou.jingbanyou.tourist.service.ITranscribeService;
+import cn.edu.gdou.jingbanyou.tourist.service.IVisitorConversationService;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -57,9 +60,10 @@ public class TouristController extends BaseController {
     private final ITranscribeService transcribeService;
     private final IChatMemoryService chatMemoryService;
     private final ITtsService ttsService;
-    private final IRagPrecheckService ragPrecheckService;
     private final RedisTemplate<String, Object> chatMetadataRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final IVisitorConversationService visitorConversationService;
+    private final IEmotionDetectService emotionDetectService;
 
     /**
      * 前台首屏初始化
@@ -143,27 +147,6 @@ public class TouristController extends BaseController {
         }
 
         try {
-            // ========== 优化一：RAG 预检短路 ==========
-            long ragStart = System.currentTimeMillis();
-            Optional<String> ragAnswer = ragPrecheckService.fastMatch(message, scenicId);
-            long ragCost = System.currentTimeMillis() - ragStart;
-            if (ragAnswer.isPresent()) {
-                String cachedAnswer = ragAnswer.get();
-                log.info("[RAG-预检] 命中，直接返回，耗时={}ms", ragCost);
-                // 保存元数据到 Redis
-                saveChatMetadata(sessionId, "rag_prematch", null, null, (int) ragCost);
-                // 记录 RAG 命中交互
-                String visitorId = (String) request.get("visitorId");
-                chatMemoryService.recordSingleTurn(sessionId, scenicId, visitorId,
-                        message, cachedAnswer, "text", "rag_prematch", (int) ragCost, null, null);
-                long timestamp = System.currentTimeMillis();
-                return Flux.just(
-                        metadataSse("rag_prematch", null, ragCost, timestamp),
-                        answerSse(cachedAnswer),
-                        doneSse(timestamp)
-                );
-            }
-
             long graphStart = System.currentTimeMillis();
             String visitorId = (String) request.get("visitorId");
             OverAllState result = executeGraph(message, sessionId, scenicId, visitorId);
@@ -526,5 +509,46 @@ public class TouristController extends BaseController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("audio/wav"))
                 .body(audioBytes);
+    }
+
+    /**
+     * 获取会话列表（简要信息）
+     *
+     * @param visitorId 游客ID
+     * @param scenicId 景区ID（可选）
+     * @param page 页码
+     * @param size 每页条数
+     * @return 会话列表
+     */
+    @GetMapping("/conversation/list")
+    public AjaxResult getConversationList(
+            @RequestParam String visitorId,
+            @RequestParam(required = false) Long scenicId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        if (visitorId == null || visitorId.isBlank()) {
+            return error("visitorId 不能为空");
+        }
+        List<ConversationListVO> list = visitorConversationService.getConversationList(visitorId, scenicId, page, size);
+        long total = visitorConversationService.getConversationCount(visitorId, scenicId);
+        return success(Map.of("list", list, "total", total, "page", page, "size", size));
+    }
+
+    /**
+     * 获取会话详情（完整对话）
+     *
+     * @param sessionId 会话ID
+     * @return 会话详情
+     */
+    @GetMapping("/conversation/{sessionId}")
+    public AjaxResult getConversationDetail(@PathVariable String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return error("sessionId 不能为空");
+        }
+        ConversationDetailVO detail = visitorConversationService.getConversationDetail(sessionId);
+        if (detail == null) {
+            return error("会话不存在");
+        }
+        return success(detail);
     }
 }
