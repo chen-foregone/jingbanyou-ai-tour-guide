@@ -83,7 +83,12 @@ public class ProfileUpdaterNode implements NodeAction {
     private List<String> extractTags(String question, String answer) {
         try {
             log.info("[画像更新] 输入: question={}, answer={}", question, answer);
-            String userText = "游客问题：" + question + "\nAI回答：" + answer;
+            String userText;
+            if (answer == null || answer.isBlank()) {
+                userText = "游客问题：" + question;
+            } else {
+                userText = "游客问题：" + question + "\nAI回答：" + answer;
+            }
             log.info("[画像更新] userText={}", userText);
             String raw = chatClient.prompt()
                     .user(userText)

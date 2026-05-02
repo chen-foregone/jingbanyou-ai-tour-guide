@@ -4,7 +4,7 @@ import static cn.edu.gdou.jingbanyou.tourist.constant.GraphStateKey.*;
 
 import cn.edu.gdou.jingbanyou.tourist.pojo.VisitorProfile;
 import cn.edu.gdou.jingbanyou.tourist.service.IProfileVectorStoreService;
-import cn.edu.gdou.jingbanyou.tourist.service.ProfileVectorStoreService.SimilarProfile;
+import cn.edu.gdou.jingbanyou.tourist.service.impl.ProfileVectorStoreService.SimilarProfile;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +14,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 画像加载节点

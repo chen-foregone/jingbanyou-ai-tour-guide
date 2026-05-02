@@ -20,11 +20,8 @@ import cn.edu.gdou.jingbanyou.tourist.service.IStreamingAnswerService;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -33,15 +30,12 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import cn.hutool.core.util.IdUtil;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import cn.hutool.extra.emoji.EmojiUtil;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import java.util.concurrent.TimeUnit;
-import java.util.Base64;
 
 /**
  * 前台游客端
@@ -61,8 +55,6 @@ public class TouristController extends BaseController {
     private final ITranscribeService transcribeService;
     private final IChatMemoryService chatMemoryService;
     private final ITtsService ttsService;
-    private final RedisTemplate<String, Object> chatMetadataRedisTemplate;
-    private final ObjectMapper objectMapper;
     private final IVisitorConversationService visitorConversationService;
     private final IEmotionDetectService emotionDetectService;
     private final IStreamingAnswerService streamingAnswerService;
@@ -134,42 +126,59 @@ public class TouristController extends BaseController {
 
     /**
      * 流式对话接口
-     * Graph 节点直接执行业务逻辑，结果写入 state.ANSWER，Controller 流式发送
+     *
+     * 前端传入 visitorId + scenicId + message，可选传入 sessionId。
+     * sessionId 由前端管理用于区分对话框，同一对话框内的多轮消息共享同一个 sessionId，
+     * 这样 ChatMemory 能看到完整历史，路线规划等需要上下文的功能才能正常工作。
+     * 不传 sessionId 则系统用雪花算法新建。
+     * Graph 只做意图识别 + 检索，答案由 StreamingAnswerService 流式生成
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatStream(@RequestBody Map<String, Object> request) {
         String message = (String) request.get("message");
-        String sessionId = (String) request.get("sessionId");
-        Long scenicId = request.get("scenicId") != null
+        String visitorId;
+        Object visitorIdObj = request.get("visitorId");
+        if (visitorIdObj instanceof Number) {
+            visitorId = String.valueOf(visitorIdObj);
+        } else {
+            visitorId = (String) visitorIdObj;
+        }
+        Long scenicId = request. get("scenicId") != null
                 ? ((Number) request.get("scenicId")).longValue() : null;
+        // 前端可传入 sessionId 以复用历史上下文；空则新建
+        String sessionId = request.get("sessionId") instanceof String s && !s.isBlank()
+                ? s
+                : IdUtil.getSnowflake().nextIdStr();
 
-        log.info("[流式对话] 开始: message={}, sessionId={}, scenicId={}", message, sessionId, scenicId);
+        log.info("[流式对话] 开始: message={}, visitorId={}, scenicId={}, sessionId={}",
+                message, visitorId, scenicId, sessionId);
 
         if (message == null || message.isBlank()) {
             return Flux.just(errorSse("消息内容不能为空"));
         }
-        if (sessionId == null || sessionId.isBlank()) {
-            return Flux.just(errorSse("sessionId 不能为空"));
+        if (visitorId == null || visitorId.isBlank()) {
+            return Flux.just(errorSse("visitorId 不能为空"));
         }
 
         try {
             long graphStart = System.currentTimeMillis();
-            String visitorId = (String) request.get("visitorId");
             OverAllState result = executeGraph(message, sessionId, scenicId, visitorId);
             long graphCost = System.currentTimeMillis() - graphStart;
             log.info("[流式对话] Graph执行耗时: {}ms", graphCost);
 
             String intent = (String) result.value(GraphStateKey.INTENT).orElse("");
+            String retrievedDocs = result.value(GraphStateKey.RETRIEVED_DOCS, String.class).orElse("");
             Integer tokensUsed = (Integer) result.value(GraphStateKey.TOKENS_USED).orElse(null);
             String modelUsed = (String) result.value(GraphStateKey.MODEL_USED).orElse(null);
             String answer = (String) result.value(GraphStateKey.ANSWER).orElse("");
             // 保存对话元数据到 Redis
-            saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
-            // 记录单轮交互到 MySQL
+            chatMemoryService.saveChatMetadata(sessionId, intent, tokensUsed, modelUsed, (int) graphCost);
+            // 记录单轮交互到 MySQL（spot_question/complex_other 的答案在流中才生成，此处传空）
             Long humanId = scenicId != null
                     ? digitalHumanConfigService.getDefaultByScenicId(scenicId).getId() : null;
             chatMemoryService.recordSingleTurn(sessionId, scenicId, humanId, visitorId,
-                    message, answer != null ? answer : "", "text", intent, (int) graphCost, tokensUsed, modelUsed);
+                    message, StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent) ? (answer != null ? answer : "") : "",
+                    "text", intent, (int) graphCost, tokensUsed, modelUsed);
             String routeStatus = (String) result.value(GraphStateKey.ROUTE_STATUS).orElse(null);
 
             // pending 场景
@@ -178,16 +187,17 @@ public class TouristController extends BaseController {
                         .orElse("请告诉我您的起点和终点");
                 long timestamp = System.currentTimeMillis();
                 return Flux.just(
-                        metadataSse(intent, null, graphCost, timestamp),
+                        metadataSse(intent, null, graphCost, timestamp, sessionId),
                         answerSse(guideMessage),
                         doneSse(timestamp)
                 );
             }
 
-            if (answer == null || answer.isBlank()) {
+            if (!StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent)
+                    && (retrievedDocs == null || retrievedDocs.isBlank())) {
                 long timestamp = System.currentTimeMillis();
                 return Flux.just(
-                        metadataSse(intent, null, graphCost, timestamp),
+                        metadataSse(intent, null, graphCost, timestamp, sessionId),
                         answerSse("抱歉，暂时无法生成回复。"),
                         doneSse(timestamp)
                 );
@@ -207,10 +217,10 @@ public class TouristController extends BaseController {
             DigitalHumanConfig digitalHuman = scenicId != null
                     ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
 
-            return Flux.just(metadataSse(intent, rawRoutes, graphCost, timestamp))
+            return Flux.just(metadataSse(intent, rawRoutes, graphCost, timestamp, sessionId))
                     .concatWith(streamingAnswerService.streamAnswer(
                             sessionId, scenicId, humanId, visitorId,
-                            intent, message, digitalHuman,
+                            intent, message, retrievedDocs, digitalHuman,
                             rawRoutes, intent, graphCostMs, startTimestamp
                     ))
                     .concatWith(Flux.just(doneSse(timestamp)))
@@ -231,70 +241,14 @@ public class TouristController extends BaseController {
                 .build();
     }
 
-    private Flux<ServerSentEvent<String>> streamAudio(String answer, String intent, List<?> rawRoutes, Long scenicId, long startTimestamp) {
-        // 路线规划时从 JSON 提取文本描述，避免过长 JSON
-        String ttsText = answer;
-        if (StreamGraphConfiguration.INTENT_ROUTE_PLAN.equals(intent) && rawRoutes != null && !rawRoutes.isEmpty()) {
-            ttsText = buildRouteNarration(rawRoutes);
-        }
-        // 过滤 emoji，避免 CosyVoice 报 418 错误
-        ttsText = ttsText != null ? EmojiUtil.removeAllEmojis(ttsText) : "";
-
-        // 截断超长文本（CosyVoice 单次限制约 500 字）
-        if (ttsText.length() > 500) {
-            ttsText = ttsText.substring(0, 500);
-        }
-
-        DigitalHumanConfig digitalHuman = scenicId != null
-                ? digitalHumanConfigService.getDefaultByScenicId(scenicId) : null;
-
-        AtomicInteger seq = new AtomicInteger(0);
-        final long audioStart = System.currentTimeMillis();
-        log.info("[TTS-流式] 开始合成, audioStart={}", audioStart);
-
-        return ttsService.streamAudio(ttsText, digitalHuman)
-                .map(chunk -> {
-                    int s = seq.incrementAndGet();
-                    String base64 = Base64.getEncoder().encodeToString(chunk);
-                    log.debug("[TTS-流式] 推送第{}个chunk, 大小={}B", s, chunk.length);
-                    return audioSse(s, base64, audioStart);
-                })
-                .doOnComplete(() -> {
-                    long cost = System.currentTimeMillis() - audioStart;
-                    log.info("[TTS-流式] 全部推送完成, 共{}个chunk, 耗时={}ms", seq.get(), cost);
-                })
-                .doOnError(e -> log.error("[TTS-流式] 流失败，切换文件方式: {}", e.getMessage()));
-    }
-
-    private String buildRouteNarration(List<?> rawRoutes) {
-        StringBuilder sb = new StringBuilder("为您推荐以下路线：");
-        for (int i = 0; i < rawRoutes.size(); i++) {
-            Map<String, Object> route = (Map<String, Object>) rawRoutes.get(i);
-            String strategy = String.valueOf(route.getOrDefault("strategy", "路线" + (i + 1)));
-            String desc = String.valueOf(route.getOrDefault("description", ""));
-            sb.append(strategy).append("路线：").append(desc).append("。");
-        }
-        return sb.toString();
-    }
-
-    private ServerSentEvent<String> audioSse(int seq, String base64Chunk, long startTimestamp) {
-        long audioCost = System.currentTimeMillis() - startTimestamp;
-        long serverTime = System.currentTimeMillis();
-        String data = "{\"seq\":" + seq + ",\"chunk\":\"" + base64Chunk + "\",\"audioCostMs\":" + audioCost + ",\"serverTime\":" + serverTime + "}";
-        return ServerSentEvent.<String>builder()
-                .id(String.valueOf(serverTime))
-                .event("audio")
-                .data(data)
-                .build();
-    }
-
-    private ServerSentEvent<String> metadataSse(String intent, List<?> attachments, long graphCost, long timestamp) {
+    private ServerSentEvent<String> metadataSse(String intent, List<?> attachments, long graphCost, long timestamp, String sessionId) {
         String data;
+        String sid = escapeJson(sessionId != null ? sessionId : "");
         if (attachments == null || attachments.isEmpty()) {
-            data = "{\"intent\":\"" + escapeJson(intent) + "\",\"graphCostMs\":" + graphCost + ",\"timestamp\":" + timestamp + "}";
+            data = "{\"intent\":\"" + escapeJson(intent) + "\",\"sessionId\":\"" + sid + "\",\"graphCostMs\":" + graphCost + ",\"timestamp\":" + timestamp + "}";
         } else {
             String attachmentsJson = buildAttachmentsJson(attachments);
-            data = "{\"intent\":\"" + escapeJson(intent) + "\",\"attachments\":" + attachmentsJson + ",\"graphCostMs\":" + graphCost + ",\"timestamp\":" + timestamp + "}";
+            data = "{\"intent\":\"" + escapeJson(intent) + "\",\"sessionId\":\"" + sid + "\",\"attachments\":" + attachmentsJson + ",\"graphCostMs\":" + graphCost + ",\"timestamp\":" + timestamp + "}";
         }
         return ServerSentEvent.<String>builder()
                 .id(String.valueOf(timestamp))
@@ -414,7 +368,7 @@ public class TouristController extends BaseController {
         }
 
         // 从 Redis 取对话元数据
-        Map<String, Object> meta = getChatMetadata(sessionId);
+        Map<String, Object> meta = chatMemoryService.getChatMetadata(sessionId);
         String intentType = meta != null ? (String) meta.get("intent") : null;
         Integer responseTimeMs = meta != null ? (Integer) meta.get("responseTimeMs") : null;
         Integer tokensUsed = meta != null ? (Integer) meta.get("tokensUsed") : null;
@@ -434,54 +388,9 @@ public class TouristController extends BaseController {
         }
 
         // 清除元数据 key
-        deleteChatMetadata(sessionId);
+        chatMemoryService.deleteChatMetadata(sessionId);
 
         return success("会话已保存");
-    }
-
-    /**
-     * 将对话元数据存入 Redis，TTL 1 小时
-     */
-    private void saveChatMetadata(String sessionId, String intent, Integer tokensUsed,
-                                  String modelUsed, int responseTimeMs) {
-        try {
-            Map<String, Object> meta = new HashMap<>();
-            meta.put("intent", intent);
-            meta.put("tokensUsed", tokensUsed);
-            meta.put("modelUsed", modelUsed);
-            meta.put("responseTimeMs", responseTimeMs);
-            String json = objectMapper.writeValueAsString(meta);
-            chatMetadataRedisTemplate.opsForValue().set("chat:meta:" + sessionId, json, 1, TimeUnit.HOURS);
-        } catch (JsonProcessingException e) {
-            log.warn("保存对话元数据失败 sessionId={}", sessionId, e);
-        }
-    }
-
-    /**
-     * 从 Redis 获取对话元数据
-     */
-    private Map<String, Object> getChatMetadata(String sessionId) {
-        try {
-            Object raw = chatMetadataRedisTemplate.opsForValue().get("chat:meta:" + sessionId);
-            if (raw == null) return null;
-            if (raw instanceof String) {
-                return objectMapper.readValue((String) raw, Map.class);
-            }
-        } catch (Exception e) {
-            log.warn("获取对话元数据失败 sessionId={}", sessionId, e);
-        }
-        return null;
-    }
-
-    /**
-     * 从 Redis 删除对话元数据
-     */
-    private void deleteChatMetadata(String sessionId) {
-        try {
-            chatMetadataRedisTemplate.delete("chat:meta:" + sessionId);
-        } catch (Exception e) {
-            log.warn("删除对话元数据失败 sessionId={}", sessionId, e);
-        }
     }
 
     /**

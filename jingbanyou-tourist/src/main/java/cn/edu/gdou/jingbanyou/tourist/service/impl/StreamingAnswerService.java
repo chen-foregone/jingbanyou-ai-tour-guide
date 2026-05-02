@@ -2,8 +2,6 @@ package cn.edu.gdou.jingbanyou.tourist.service.impl;
 
 import cn.edu.gdou.jingbanyou.manage.entity.DigitalHumanConfig;
 import cn.edu.gdou.jingbanyou.tourist.graph.StreamGraphConfiguration;
-import cn.edu.gdou.jingbanyou.tourist.graph.node.GeneralChatFallbackNode;
-import cn.edu.gdou.jingbanyou.tourist.graph.node.HybridRetrievalNode;
 import cn.edu.gdou.jingbanyou.tourist.service.IChatMemoryService;
 import cn.edu.gdou.jingbanyou.tourist.service.IStreamingAnswerService;
 import cn.edu.gdou.jingbanyou.tourist.service.ITtsService;
@@ -12,9 +10,11 @@ import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>核心流程：
  * <ol>
- *   <li>AI token 级流式输出</li>
+ *   <li>直接通过 ChatClient.stream() 获取真实 token 流</li>
  *   <li>累积 token 到段落缓冲区</li>
  *   <li>段落结束时：推送 answer_fragment SSE + 触发 TTS</li>
  *   <li>流结束后写入 Redis ChatMemory</li>
@@ -46,8 +46,12 @@ public class StreamingAnswerService implements IStreamingAnswerService {
     private static final int MAX_PARAGRAPH_CHARS = 200;
     private static final Set<Character> PARAGRAPH_END_CHARS = Set.of('。', '！', '？', '．');
 
-    private final HybridRetrievalNode hybridRetrievalNode;
-    private final GeneralChatFallbackNode generalChatFallbackNode;
+    @Qualifier("hybridRetrievalStreamingChatClient")
+    private final ChatClient hybridRetrievalStreamingChatClient;
+
+    @Qualifier("generalChatStreamingChatClient")
+    private final ChatClient generalChatStreamingChatClient;
+
     private final ITtsService ttsService;
     private final IChatMemoryService chatMemoryService;
     private final JedisRedisChatMemoryRepository chatMemoryRepository;
@@ -60,6 +64,7 @@ public class StreamingAnswerService implements IStreamingAnswerService {
             String visitorId,
             String intent,
             String userMessage,
+            String retrievedDocs,
             DigitalHumanConfig digitalHuman,
             List<?> rawRoutes,
             String intentType,
@@ -75,10 +80,21 @@ public class StreamingAnswerService implements IStreamingAnswerService {
                     humanId, visitorId, userMessage, intentType, graphCostMs, startTimestamp);
         }
 
-        // spot_question / complex_other: 调用节点的 streamAnswer() 方法流式获取 token
-        Flux<String> tokenFlux = StreamGraphConfiguration.INTENT_SPOT_QUESTION.equals(intent)
-                ? hybridRetrievalNode.streamAnswer(userMessage, scenicId, sessionId)
-                : generalChatFallbackNode.streamAnswer(userMessage, sessionId);
+        // spot_question / complex_other: 直接通过 ChatClient.stream() 获取真实 token 流
+        Flux<String> tokenFlux;
+        if (retrievedDocs == null || retrievedDocs.isBlank()) {
+            tokenFlux = Flux.just("这个问题我暂时还不太清楚，建议您咨询景区工作人员。");
+        } else {
+            ChatClient streamingChatClient = StreamGraphConfiguration.INTENT_SPOT_QUESTION.equals(intent)
+                    ? hybridRetrievalStreamingChatClient
+                    : generalChatStreamingChatClient;
+
+            tokenFlux = streamingChatClient.prompt()
+                    .user(retrievedDocs)
+                    .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
+                    .stream()
+                    .content();
+        }
 
         AtomicInteger seq = new AtomicInteger(0);
         StringBuilder buffer = new StringBuilder();
@@ -109,18 +125,69 @@ public class StreamingAnswerService implements IStreamingAnswerService {
                 })
                 .subscribe();
 
-        // paragraphSink → 依次处理每个段落：answer_fragment → TTS audio
-        return paragraphSink.asFlux()
-                .flatMapSequential(paragraph -> processParagraph(paragraph, digitalHuman, seq, startTimestamp))
+        // TTS 音频 Sink：独立于文本流，fire-and-forget
+        Sinks.Many<ServerSentEvent<String>> audioSink = Sinks.many().multicast().onBackpressureBuffer(128);
+
+        // 文本流：段落到达时立即发送 answer_fragment SSE，TTS 后台发射到 audioSink
+        Flux<ServerSentEvent<String>> textFlux = paragraphSink.asFlux()
+                .flatMapSequential(paragraph -> fireTextAndTriggerTts(
+                        paragraph, digitalHuman, seq, startTimestamp, audioSink))
+                .doOnComplete(() -> audioSink.tryEmitComplete());
+
+        // 合并文本和音频：两边独立发射，互不阻塞
+        return Flux.merge(textFlux, audioSink.asFlux())
                 .doOnComplete(() -> {
                     writeChatMemory(sessionId, userMessage, fullAnswer.toString());
                     int totalMs = (int) (System.currentTimeMillis() - startTimestamp);
                     chatMemoryService.recordSingleTurn(sessionId, scenicId, humanId, visitorId,
-                            userMessage, fullAnswer.toString(), "text_streaming",
+                            userMessage, fullAnswer.toString(), "text",
                             intentType, totalMs, null, null);
                 })
                 .doOnError(e -> log.error("[流式] LLM 流异常", e))
                 .doOnCancel(() -> writeChatMemory(sessionId, userMessage, fullAnswer.toString()));
+    }
+
+    /**
+     * 发送文本 SSE 并触发后台 TTS（fire-and-forget）
+     *
+     * <p>核心设计：文本段落立即返回给前端，TTS 在后台独立执行，
+     * 音频块通过 audioSink 异步合并到同一个 SSE 流中。
+     * 这样 TTS 的延迟不会阻塞后续段落的文本到达。
+     *
+     * @param paragraph    段落文本
+     * @param digitalHuman 数字人配置（用于选择音色）
+     * @param seq          TTS 音频序号
+     * @param startTimestamp 流开始时间
+     * @param audioSink    TTS 音频输出 Sink
+     * @return 立即返回文本 SSE 的 Mono
+     */
+    private Mono<ServerSentEvent<String>> fireTextAndTriggerTts(
+            String paragraph,
+            DigitalHumanConfig digitalHuman,
+            AtomicInteger seq,
+            long startTimestamp,
+            Sinks.Many<ServerSentEvent<String>> audioSink) {
+        String clean = paragraph.trim();
+        if (clean.isEmpty()) return Mono.empty();
+
+        // 准备 TTS 文本（去 emoji + 截断）
+        String ttsText = EmojiUtil.removeAllEmojis(clean);
+        if (ttsText.length() > 500) {
+            ttsText = ttsText.substring(0, 500);
+        }
+
+        // Fire-and-forget: 在独立订阅中执行 TTS，不等待结果
+        if (!ttsText.isBlank()) {
+            ttsService.streamAudio(ttsText, digitalHuman)
+                    .map(chunk -> audioSse(chunk, seq.incrementAndGet(), startTimestamp))
+                    .subscribe(
+                            audioSink::tryEmitNext,
+                            error -> log.warn("[流式] TTS 段落失败，跳过: {}", error.getMessage())
+                    );
+        }
+
+        // 立即返回文本 SSE，不等待 TTS
+        return Mono.just(answerFragmentSse(clean));
     }
 
     /**
@@ -142,46 +209,21 @@ public class StreamingAnswerService implements IStreamingAnswerService {
         AtomicInteger seq = new AtomicInteger(0);
         String fullAnswer = text;
 
-        return Flux.fromIterable(paragraphs)
-                .flatMapSequential(p -> processParagraph(p, digitalHuman, seq, startTimestamp))
+        Sinks.Many<ServerSentEvent<String>> audioSink = Sinks.many().multicast().onBackpressureBuffer(128);
+
+        Flux<ServerSentEvent<String>> textFlux = Flux.fromIterable(paragraphs)
+                .flatMapSequential(p -> fireTextAndTriggerTts(p, digitalHuman, seq, startTimestamp, audioSink))
+                .doOnComplete(() -> audioSink.tryEmitComplete());
+
+        return Flux.merge(textFlux, audioSink.asFlux())
                 .doOnComplete(() -> {
                     writeChatMemory(sessionId, userMessage, fullAnswer);
                     int totalMs = (int) (System.currentTimeMillis() - startTimestamp);
                     chatMemoryService.recordSingleTurn(sessionId, scenicId, humanId, visitorId,
-                            userMessage, fullAnswer, "text_streaming",
+                            userMessage, fullAnswer, "text",
                             intentType, totalMs, null, null);
                 })
                 .doOnError(e -> log.error("[流式] 文本流异常", e));
-    }
-
-    /**
-     * 处理单个段落：先发 answer_fragment SSE，再发 TTS audio SSE
-     */
-    private Flux<ServerSentEvent<String>> processParagraph(
-            String paragraph,
-            DigitalHumanConfig digitalHuman,
-            AtomicInteger seq,
-            long startTimestamp) {
-        String clean = paragraph.trim();
-        if (clean.isEmpty()) return Flux.empty();
-
-        String ttsText = EmojiUtil.removeAllEmojis(clean);
-        if (ttsText.length() > 500) {
-            ttsText = ttsText.substring(0, 500);
-        }
-
-        if (ttsText.isBlank()) {
-            return Flux.just(answerFragmentSse(clean));
-        }
-        return Flux.concat(
-                Mono.just(answerFragmentSse(clean)),
-                ttsService.streamAudio(ttsText, digitalHuman)
-                        .map(chunk -> audioSse(chunk, seq.incrementAndGet(), startTimestamp))
-                        .onErrorResume(e -> {
-                            log.warn("[流式] TTS 段落失败，跳过: {}", e.getMessage());
-                            return Flux.empty();
-                        })
-        );
     }
 
     /**

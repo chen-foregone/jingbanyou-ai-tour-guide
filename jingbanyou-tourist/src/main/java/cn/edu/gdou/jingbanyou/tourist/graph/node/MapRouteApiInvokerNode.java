@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.edu.gdou.jingbanyou.tourist.service.IRouteCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -58,16 +57,14 @@ public class MapRouteApiInvokerNode implements NodeAction {
         String sessionId = state.value(SESSION_ID, String.class).orElse(null);
         Long scenicId = state.value(SCENIC_ID, Long.class).orElse(null);
 
-        log.info("[路线规划调用] 输入: question={}, sessionId={}, scenicId={}", question, sessionId, scenicId);
+        log.info("[路线规划] 输入: question={}, sessionId={}, scenicId={}", question, sessionId, scenicId);
 
-        // 先用 LLM 判断参数是否完整（调用地图 API 前）
         String llmResponse = chatClient.prompt()
-                .user("用户问题：" + question)
-                .advisors(new SimpleLoggerAdvisor())
+                .user(question != null ? question : "")
                 .advisors(ctx -> ctx.param(ChatMemory.CONVERSATION_ID, sessionId))
                 .call()
                 .content();
-        log.info("[路线规划调用] 模型输出: {}", llmResponse);
+        log.info("[路线规划] 模型输出: {}", llmResponse);
 
         if (llmResponse != null && llmResponse.trim().startsWith("[")) {
             List<Map<String, Object>> rawRoutes = parseRoutes(llmResponse);
@@ -94,7 +91,7 @@ public class MapRouteApiInvokerNode implements NodeAction {
                     ROUTE_STATUS, "success"
             ));
         } else {
-            String guideMsg = llmResponse != null ? llmResponse : "请告诉我您的起点和终点";
+            String guideMsg = extractGuideMessage(llmResponse);
             return state.updateState(Map.of(
                     GUIDE_MESSAGE, guideMsg,
                     ANSWER, guideMsg,
@@ -102,6 +99,29 @@ public class MapRouteApiInvokerNode implements NodeAction {
                     RAW_ROUTES, new ArrayList<>()
             ));
         }
+    }
+
+    /**
+     * 从 LLM 输出中提取引导语，去除推理过程
+     * LLM 可能输出多行（推理+引导语），只取最后一行非空内容
+     */
+    private String extractGuideMessage(String llmResponse) {
+        if (llmResponse == null || llmResponse.isBlank()) {
+            return "请告诉我您的起点和终点";
+        }
+        String[] lines = llmResponse.trim().split("\n");
+        // 从最后一行往前找第一个有意义的行
+        for (int i = lines.length - 1; i >= 0; i--) {
+            String line = lines[i].trim();
+            if (!line.isBlank()) {
+                // 如果该行以问号结尾，直接返回
+                if (line.contains("？") || line.contains("?")) {
+                    return line;
+                }
+            }
+        }
+        // 没有问号，返回最后一行
+        return lines[lines.length - 1].trim();
     }
 
     /**
