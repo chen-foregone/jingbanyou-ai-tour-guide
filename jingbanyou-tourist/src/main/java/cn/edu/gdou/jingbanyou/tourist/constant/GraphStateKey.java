@@ -190,6 +190,23 @@ public final class GraphStateKey {
      */
     public static final String ROUTE_CACHE_HIT = "routeCacheHit";
 
+    // ==================== 情感分析相关 ====================
+
+    /**
+     * 检测到的用户情感
+     * 类型：String
+     * 可选值：positive / neutral / negative
+     * 来源：EmotionAnalysisNode
+     */
+    public static final String EMOTION_DETECTED = "emotionDetected";
+
+    /**
+     * 情感置信度
+     * 类型：Double
+     * 来源：EmotionAnalysisNode
+     */
+    public static final String EMOTION_CONFIDENCE = "emotionConfidence";
+
     // 私有构造函数，防止实例化
     private GraphStateKey() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");

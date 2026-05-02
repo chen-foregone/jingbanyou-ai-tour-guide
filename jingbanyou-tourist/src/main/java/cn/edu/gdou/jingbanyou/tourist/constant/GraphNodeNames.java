@@ -101,6 +101,17 @@ public final class GraphNodeNames {
      */
     public static final String PROFILE_UPDATER = "profileUpdater";
 
+    // ==================== 情感分析相关 ====================
+
+    /**
+     * 情感分析节点
+     * 功能：对游客问题进行情感分类（positive/neutral/negative）
+     * 输入：QUESTION
+     * 输出：EMOTION_DETECTED, EMOTION_CONFIDENCE
+     * 注意：异步执行，结果不阻塞主对话流程
+     */
+    public static final String EMOTION_ANALYSIS = "emotionAnalysis";
+
     // ==================== 特殊节点 ====================
     
     /**

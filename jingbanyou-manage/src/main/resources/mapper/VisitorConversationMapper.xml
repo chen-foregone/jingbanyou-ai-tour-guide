@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.gdou.jingbanyou.manage.mapper.VisitorConversationMapper">
+
+    <!-- 会话列表查询 -->
+    <select id="selectConversationList" resultType="cn.edu.gdou.jingbanyou.manage.dto.ConversationListVO">
+        SELECT
+            session_id     AS sessionId,
+            scenic_id      AS scenicId,
+            title,
+            first_message  AS firstMessage,
+            last_message   AS lastMessage,
+            turn_count     AS turnCount,
+            intent_type    AS intentType,
+            emotion_detected AS emotionDetected,
+            start_time     AS startTime,
+            end_time       AS endTime,
+            duration_ms    AS durationMs
+        FROM manage_visitor_conversation
+        WHERE 1=1
+        <if test="visitorId != null and visitorId != ''">
+            AND visitor_id = #{visitorId}
+        </if>
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+        ORDER BY start_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 会话总数统计 -->
+    <select id="countConversationList" resultType="long">
+        SELECT COUNT(*)
+        FROM manage_visitor_conversation
+        WHERE 1=1
+        <if test="visitorId != null and visitorId != ''">
+            AND visitor_id = #{visitorId}
+        </if>
+        <if test="scenicId != null">
+            AND scenic_id = #{scenicId}
+        </if>
+    </select>
+
+</mapper>

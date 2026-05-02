@@ -51,6 +51,8 @@ public class StreamGraphConfiguration {
     private NodeAction generalChatFallbackNode;
     @Autowired
     private NodeAction routePolishNode;
+    @Autowired
+    private NodeAction emotionAnalysisNode;
 
     @Bean
     public CompiledGraph streamCompiledGraph() throws GraphStateException {
