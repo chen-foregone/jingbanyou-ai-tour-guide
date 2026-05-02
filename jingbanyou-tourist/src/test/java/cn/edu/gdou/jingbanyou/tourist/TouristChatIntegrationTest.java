@@ -10,7 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.*;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Pipeline;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,6 +48,9 @@ public class TouristChatIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     private String baseUrl;
 
@@ -106,7 +112,8 @@ public class TouristChatIntegrationTest {
 
     private void doTestFaqMatch(Faq faq) {
         faqTotal.incrementAndGet();
-
+        Jedis jedis = new Jedis();
+        Pipeline pipelined = jedis.pipelined();
         Long scenicId = faq.getScenicId();
         String question = faq.getQuestion();
         String expectedAnswer = faq.getAnswer();

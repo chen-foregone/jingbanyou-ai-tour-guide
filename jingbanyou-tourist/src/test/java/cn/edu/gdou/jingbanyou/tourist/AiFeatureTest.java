@@ -1,7 +1,7 @@
 //package cn.edu.gdou.jingbanyou.tourist;
 //
-//import cn.edu.gdou.jingbanyou.tourist.service.TtsService;
-//import cn.edu.gdou.jingbanyou.tourist.service.TranscribeService;
+//import cn.edu.gdou.jingbanyou.tourist.service.impl.TtsService;
+//import cn.edu.gdou.jingbanyou.tourist.service.impl.TranscribeService;
 //import lombok.extern.slf4j.Slf4j;
 //import org.junit.jupiter.api.Test;
 //import org.springframework.beans.factory.annotation.Autowired;
