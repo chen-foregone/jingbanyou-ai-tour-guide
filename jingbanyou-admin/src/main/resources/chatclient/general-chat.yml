@@ -14,7 +14,7 @@ jingbanyou:
 
         回复不超过80字，语气温和亲切，禁止使用emoji表情符号。
       model:
-        name: qwen-turbo
+        name: qwen-plus
         temperature: 0.7
         topP: 0.9
         maxTokens: 128

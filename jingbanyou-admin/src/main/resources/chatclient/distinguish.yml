@@ -48,7 +48,7 @@ jingbanyou:
         { "intent": "意图标签", "question": "从音频中提取的问题文本" }
 
       model:
-        name: qwen-turbo
+        name: qwen-plus
         temperature: 0.1
         topP: 0.8
         maxTokens: 128

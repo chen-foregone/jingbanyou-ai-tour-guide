@@ -22,7 +22,7 @@ jingbanyou:
         - 历史中有系统追问位置而当前回答了具体地点→信息已完整→调用工具
         - 景点名称（东门、退思园、三桥等）直接作为起点/终点传给工具
       model:
-        name: qwen-turbo
+        name: qwen-plus
         temperature: 0.0
         topP: 0.85
         maxTokens: 1024

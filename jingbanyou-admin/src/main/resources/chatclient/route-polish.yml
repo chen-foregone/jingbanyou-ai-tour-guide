@@ -39,7 +39,7 @@ jingbanyou:
 
         只输出 JSON 数组，不要输出其他内容。
       model:
-        name: qwen-turbo
+        name: qwen-plus
         temperature: 0.6
         topP: 0.88
         maxTokens: 1024

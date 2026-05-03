@@ -24,7 +24,7 @@ jingbanyou:
         - medium：参考资料相关但需要一定整合或推理
         - low：参考资料不足或无关，需要编造信息才能回答
       model:
-        name: qwen-turbo
+        name: qwen-plus
         temperature: 0.5
         topP: 0.85
         maxTokens: 512
