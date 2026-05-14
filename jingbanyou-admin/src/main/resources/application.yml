@@ -158,8 +158,8 @@ spring:
         endpoint: oss-cn-beijing.aliyuncs.com
         access-key: ${OSS_ACCESS_KEY:}
         secret-key: ${OSS_SECRET_KEY:}
-        bucket-name: java-ai-c-z-h
-        domain: https://java-ai-c-z-h.oss-cn-beijing.aliyuncs.com
+        bucket-name: ${OSS_BUCKET_NAME:java-ai-c-z-h}
+        domain: ${OSS_DOMAIN:https://java-ai-c-z-h.oss-cn-beijing.aliyuncs.com}
         base-path: dkd-images/
 
 # Redis Stack 向量检索（Redis Stack 镜像只有6379端口，RediSearch模块已加载）
