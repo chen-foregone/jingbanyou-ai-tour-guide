@@ -40,8 +40,8 @@ secret: ${JWT_SECRET:jingbanyou2026secretkeyforjwttokenverification}
 ```yaml
 aliyun-oss:
   - platform: aliyun-oss-1
-    access-key: LTAI5t5nJGzDbFXWaqVktKAK
-    secret-key: jM0BTeIOXmHMJd6n2v7WGATfnTC63C
+    access-key: LTAIxxxxxxxxxxxxxxxxxxxxxxxx
+    secret-key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     bucket-name: java-ai-c-z-h
 ```
 
