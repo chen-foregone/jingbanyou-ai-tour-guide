@@ -36,7 +36,7 @@ jingbanyou/
 ├── jingbanyou-manage/       # 管理端业务（景点、路线管理）
 ├── jingbanyou-quartz/       # 定时任务
 ├── jingbanyou-system/       # 系统模块
-├── jingbanyou-tourist/      # 游客端核心业务（AI 对话核心 ⭐）
+├── jingbanyou-tourist/      # 游客端核心业务（AI 对话核心）
 ├── sql/                     # 数据库脚本
 └── docs/                    # 接口文档
 ```
